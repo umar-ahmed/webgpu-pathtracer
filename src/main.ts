@@ -81,13 +81,13 @@ async function main() {
       var uv = getUv(coord.xy);
       
       // Apply a simple animation.
-      uv -= vec2f(0.5 * sin(uniforms.time * 0.5), 0.5 * cos(uniforms.time * 0.5));
+      // uv -= vec2f(0.5 * sin(uniforms.time * 0.5), 0.5 * cos(uniforms.time * 0.5));
       
       // Get the color from the uv coordinates.
-      var color = vec3f(uv, 1.0);
+      var color = vec3f(uv, 0.0);
       
       // Apply the ACES tonemapping.
-      color = acesTonemap(color);
+      // color = acesTonemap(color);
 
       return vec4f(color, 1);
     }
