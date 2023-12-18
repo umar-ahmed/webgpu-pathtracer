@@ -61,8 +61,11 @@ async function main() {
 
     @fragment
     fn fragmentMain(@builtin(position) coord: vec4f) -> @location(0) vec4f {
-      let uv = getUv(coord.xy);
-      let color = vec3f(uv.xy, sin(uniforms.time));
+      var uv = getUv(coord.xy);
+      // Rotate the uv coordinates by time around the center of the screen.
+      uv -= vec2f(0.5 * sin(uniforms.time));
+      // Get the color from the uv coordinates.
+      let color = vec3f(uv, 1.0);
       return vec4f(color, 1);
     }
   `;
