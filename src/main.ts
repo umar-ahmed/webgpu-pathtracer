@@ -32,50 +32,131 @@ async function main() {
   context.configure({ device, format });
 
   const code = /* wgsl */ `
+    struct Uniforms {
+      resolution: vec2<f32>,
+      aspect: f32,
+      time: f32,
+    };
+
+    @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
     @vertex
     fn vertexMain(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
-      const pos = array(vec2f(0, 1), vec2f(-1, -1), vec2f(1, -1));
+      let pos = array(
+        vec2f(-1.0, -1.0),
+        vec2f(1.0, -1.0),
+        vec2f(1.0, 1.0),
+        vec2f(-1.0, -1.0),
+        vec2f(1.0, 1.0),
+        vec2f(-1.0, 1.0),
+      );
       return vec4f(pos[i], 0, 1);
     }
 
+    fn getUv(coord: vec2f) -> vec2f {
+      var uv = coord / uniforms.resolution;
+      uv.y = 1.0 - uv.y;
+      return uv;
+    }
+
     @fragment
-    fn fragmentMain() -> @location(0) vec4f {
-      return vec4f(1, 0, 0, 1);
+    fn fragmentMain(@builtin(position) coord: vec4f) -> @location(0) vec4f {
+      let uv = getUv(coord.xy);
+      let color = vec3f(uv.xy, sin(uniforms.time));
+      return vec4f(color, 1);
     }
   `;
 
-  const module = device.createShaderModule({ code });
-
-  const pipeline = device.createRenderPipeline({
-    vertex: {
-      module,
-      entryPoint: "vertexMain",
-    },
-    fragment: {
-      module,
-      entryPoint: "fragmentMain",
-      targets: [{ format }],
-    },
-    layout: "auto",
+  const uniformsBuffer = device.createBuffer({
+    size: 4 * 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const commandEncoder = device.createCommandEncoder();
-  const textureView = context.getCurrentTexture().createView();
-
-  const passEncoder = commandEncoder.beginRenderPass({
-    colorAttachments: [
+  const uniformBindGroupLayout = device.createBindGroupLayout({
+    entries: [
       {
-        view: textureView,
-        loadOp: "clear",
-        storeOp: "store",
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT,
+        buffer: {
+          type: "uniform",
+        },
       },
     ],
   });
-  passEncoder.setPipeline(pipeline);
-  passEncoder.draw(3);
-  passEncoder.end();
 
-  device.queue.submit([commandEncoder.finish()]);
+  const pipeline = device.createRenderPipeline({
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [uniformBindGroupLayout],
+    }),
+    primitive: {
+      topology: "triangle-list",
+    },
+    vertex: {
+      module: device.createShaderModule({ code }),
+      entryPoint: "vertexMain",
+    },
+    fragment: {
+      module: device.createShaderModule({ code }),
+      entryPoint: "fragmentMain",
+      targets: [{ format }],
+    },
+  });
+
+  const uniformBindGroup = device.createBindGroup({
+    layout: uniformBindGroupLayout,
+    entries: [
+      {
+        binding: 0,
+        resource: {
+          buffer: uniformsBuffer,
+        },
+      },
+    ],
+  });
+
+  const startTime = performance.now();
+
+  function render(timestamp: DOMHighResTimeStamp) {
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    if (!context) {
+      return;
+    }
+
+    const time = (timestamp - startTime) / 1000;
+
+    const uniformsArray = new Float32Array([
+      canvas.width,
+      canvas.height,
+      canvas.width / canvas.height,
+      time,
+    ]);
+
+    device.queue.writeBuffer(uniformsBuffer, 0, uniformsArray);
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: context.getCurrentTexture().createView(),
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+    });
+    passEncoder.setPipeline(pipeline);
+    passEncoder.setBindGroup(0, uniformBindGroup);
+    passEncoder.draw(6);
+    passEncoder.end();
+
+    device.queue.submit([commandEncoder.finish()]);
+
+    requestAnimationFrame(render);
+  }
+
+  render(startTime);
 }
 
 main().catch((err) => {
