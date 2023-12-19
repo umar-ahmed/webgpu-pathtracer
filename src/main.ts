@@ -93,8 +93,13 @@ async function main() {
     }
   `;
 
+  const module = device.createShaderModule({ code });
+
   const uniformsBuffer = device.createBuffer({
-    size: 4 * 4 * 4,
+    size:
+      2 * 32 + // vec2<f32>
+      32 + // f32
+      32, // f32
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -110,7 +115,7 @@ async function main() {
     ],
   });
 
-  const pipeline = device.createRenderPipeline({
+  const pipeline = await device.createRenderPipelineAsync({
     layout: device.createPipelineLayout({
       bindGroupLayouts: [uniformBindGroupLayout],
     }),
@@ -118,11 +123,11 @@ async function main() {
       topology: "triangle-list",
     },
     vertex: {
-      module: device.createShaderModule({ code }),
+      module,
       entryPoint: "vertexMain",
     },
     fragment: {
-      module: device.createShaderModule({ code }),
+      module,
       entryPoint: "fragmentMain",
       targets: [{ format }],
     },
@@ -176,8 +181,9 @@ async function main() {
     passEncoder.setBindGroup(0, uniformBindGroup);
     passEncoder.draw(6);
     passEncoder.end();
+    const commandBuffer = commandEncoder.finish();
 
-    device.queue.submit([commandEncoder.finish()]);
+    device.queue.submit([commandBuffer]);
 
     requestAnimationFrame(render);
   }
