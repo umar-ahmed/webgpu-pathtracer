@@ -31,6 +31,60 @@ async function main() {
 
   context.configure({ device, format });
 
+  const computeShaderCode = /* wgsl */ `
+    @group(0) @binding(0) var<storage, read_write> data: array<f32>;
+    
+    @compute @workgroup_size(1)
+    fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
+      let i = globalId.x;
+      data[i] = data[i] * 2.0;
+    }
+  `;
+
+  const computeShaderModule = device.createShaderModule({
+    code: computeShaderCode,
+  });
+
+  const computePipeline = device.createComputePipeline({
+    layout: "auto",
+    compute: {
+      module: computeShaderModule,
+      entryPoint: "computeMain",
+    },
+  });
+
+  const input = new Float32Array([1, 3, 5]);
+
+  const workBuffer = device.createBuffer({
+    label: "Work Buffer",
+    size: input.byteLength,
+    usage:
+      GPUBufferUsage.STORAGE |
+      GPUBufferUsage.COPY_SRC |
+      GPUBufferUsage.COPY_DST,
+  });
+
+  device.queue.writeBuffer(workBuffer, 0, input);
+
+  const resultBuffer = device.createBuffer({
+    label: "Result Buffer",
+    size: input.byteLength,
+    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+  });
+
+  const computeBindGroup = device.createBindGroup({
+    label: "Bind Group for Work Buffer",
+    layout: computePipeline.getBindGroupLayout(0),
+    entries: [
+      {
+        binding: 0,
+        resource: {
+          buffer: workBuffer,
+        },
+      },
+    ],
+  });
+
   const code = /* wgsl */ `
     struct Uniforms {
       resolution: vec2<f32>,
@@ -115,7 +169,7 @@ async function main() {
     ],
   });
 
-  const pipeline = await device.createRenderPipelineAsync({
+  const renderPipeline = await device.createRenderPipelineAsync({
     layout: device.createPipelineLayout({
       bindGroupLayouts: [uniformBindGroupLayout],
     }),
@@ -168,7 +222,27 @@ async function main() {
     device.queue.writeBuffer(uniformsBuffer, 0, uniformsArray);
 
     const commandEncoder = device.createCommandEncoder();
-    const passEncoder = commandEncoder.beginRenderPass({
+
+    // Compute pass
+    const computePassEncoder = commandEncoder.beginComputePass({
+      label: "Compute Pass",
+    });
+    computePassEncoder.setPipeline(computePipeline);
+    computePassEncoder.setBindGroup(0, computeBindGroup);
+    computePassEncoder.dispatchWorkgroups(input.length);
+    computePassEncoder.end();
+
+    commandEncoder.copyBufferToBuffer(
+      workBuffer,
+      0,
+      resultBuffer,
+      0,
+      resultBuffer.size
+    );
+
+    // Render pass
+    const renderPassEncoder = commandEncoder.beginRenderPass({
+      label: "Render Pass",
       colorAttachments: [
         {
           view: context.getCurrentTexture().createView(),
@@ -177,18 +251,33 @@ async function main() {
         },
       ],
     });
-    passEncoder.setPipeline(pipeline);
-    passEncoder.setBindGroup(0, uniformBindGroup);
-    passEncoder.draw(6);
-    passEncoder.end();
-    const commandBuffer = commandEncoder.finish();
+    renderPassEncoder.setPipeline(renderPipeline);
+    renderPassEncoder.setBindGroup(0, uniformBindGroup);
+    renderPassEncoder.draw(6);
+    renderPassEncoder.end();
 
+    const commandBuffer = commandEncoder.finish();
     device.queue.submit([commandBuffer]);
 
-    requestAnimationFrame(render);
+    // requestAnimationFrame(render);
   }
 
   render(startTime);
+
+  // Read the result
+  await resultBuffer.mapAsync(GPUMapMode.READ);
+  const result = new Float32Array(resultBuffer.getMappedRange());
+
+  console.table(
+    [
+      { input: input[0], result: result[0] },
+      { input: input[1], result: result[1] },
+      { input: input[2], result: result[2] },
+    ],
+    ["input", "result"]
+  );
+
+  resultBuffer.unmap();
 }
 
 main().catch((err) => {
