@@ -3,6 +3,7 @@ export class Renderer {
   public context: GPUCanvasContext;
   public device: GPUDevice;
   public format: GPUTextureFormat = "bgra8unorm";
+  public storageTexture: GPUTexture;
 
   static async supported(): Promise<boolean> {
     if ("gpu" in navigator === false) {
@@ -55,6 +56,17 @@ export class Renderer {
     this.format = format;
 
     this.context.configure({ device, format });
+
+    this.storageTexture = this.device.createTexture({
+      size: {
+        width: this.canvas.width,
+        height: this.canvas.height,
+        depthOrArrayLayers: 1,
+      },
+      format: "rgba8unorm",
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+      dimension: "2d",
+    });
   }
 
   setSize(width: number, height: number) {

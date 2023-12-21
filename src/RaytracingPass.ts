@@ -3,35 +3,52 @@ import { Renderer } from "./Renderer";
 
 export class RaytracingPass {
   private renderer: Renderer;
-  private input: Float32Array;
-  public workBuffer: GPUBuffer;
   public pipeline: GPUComputePipeline;
+  private bindGroupLayout: GPUBindGroupLayout;
   public bindGroup: GPUBindGroup;
 
-  constructor(renderer: Renderer, input: Float32Array) {
+  constructor(renderer: Renderer) {
     this.renderer = renderer;
-    this.input = input;
-    this.workBuffer = this.createWorkBuffer();
-    this.pipeline = this.createPipeline();
+    this.bindGroupLayout = this.createBindGroupLayout();
     this.bindGroup = this.createBindGroup();
-
-    this.renderer.device.queue.writeBuffer(this.workBuffer, 0, input);
+    this.pipeline = this.createPipeline();
   }
 
-  private createWorkBuffer() {
-    return this.renderer.device.createBuffer({
-      label: "Work Buffer",
-      size: this.input.byteLength,
-      usage:
-        GPUBufferUsage.STORAGE |
-        GPUBufferUsage.COPY_SRC |
-        GPUBufferUsage.COPY_DST,
+  private createBindGroupLayout() {
+    return this.renderer.device.createBindGroupLayout({
+      label: "Raytracing Bind Group Layout",
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          storageTexture: {
+            access: "write-only",
+            format: "rgba8unorm",
+            viewDimension: "2d",
+          },
+        },
+      ],
+    });
+  }
+
+  private createBindGroup() {
+    return this.renderer.device.createBindGroup({
+      label: "Raytracing Bind Group",
+      layout: this.bindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: this.renderer.storageTexture.createView(),
+        },
+      ],
     });
   }
 
   private createPipeline() {
     return this.renderer.device.createComputePipeline({
-      layout: "auto",
+      layout: this.renderer.device.createPipelineLayout({
+        bindGroupLayouts: [this.bindGroupLayout],
+      }),
       compute: {
         module: this.renderer.device.createShaderModule({
           code: computeShaderCode,
@@ -41,28 +58,17 @@ export class RaytracingPass {
     });
   }
 
-  private createBindGroup() {
-    return this.renderer.device.createBindGroup({
-      label: "Bind Group for Work Buffer",
-      layout: this.pipeline.getBindGroupLayout(0),
-      entries: [
-        {
-          binding: 0,
-          resource: {
-            buffer: this.workBuffer,
-          },
-        },
-      ],
-    });
-  }
-
   public render(commandEncoder: GPUCommandEncoder) {
     const computePassEncoder = commandEncoder.beginComputePass({
       label: "Compute Pass",
     });
     computePassEncoder.setPipeline(this.pipeline);
     computePassEncoder.setBindGroup(0, this.bindGroup);
-    computePassEncoder.dispatchWorkgroups(this.input.length);
+    computePassEncoder.dispatchWorkgroups(
+      this.renderer.canvas.width,
+      this.renderer.canvas.height,
+      1
+    );
     computePassEncoder.end();
   }
 }

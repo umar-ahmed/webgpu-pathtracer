@@ -13,11 +13,13 @@ export class FullscreenPass {
   private bindGroupLayout: GPUBindGroupLayout;
   private bindGroup: GPUBindGroup;
   private pipeline: GPURenderPipeline;
+  private sampler: GPUSampler;
 
   constructor(renderer: Renderer) {
     this.renderer = renderer;
     this.uniforms = this.createUniforms();
     this.uniformsBuffer = this.createUniformsBuffer();
+    this.sampler = this.createSampler();
     this.bindGroupLayout = this.createBindGroupLayout();
     this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
@@ -36,6 +38,14 @@ export class FullscreenPass {
     });
   }
 
+  private createSampler() {
+    return this.renderer.device.createSampler({
+      label: "Sampler",
+      magFilter: "linear",
+      minFilter: "linear",
+    });
+  }
+
   private createBindGroupLayout() {
     return this.renderer.device.createBindGroupLayout({
       label: "Bind Group Layout",
@@ -45,6 +55,22 @@ export class FullscreenPass {
           visibility: GPUShaderStage.FRAGMENT,
           buffer: {
             type: "uniform",
+          },
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {
+            sampleType: "float",
+            viewDimension: "2d",
+            multisampled: false,
+          },
+        },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {
+            type: "filtering",
           },
         },
       ],
@@ -61,6 +87,14 @@ export class FullscreenPass {
           resource: {
             buffer: this.uniformsBuffer,
           },
+        },
+        {
+          binding: 1,
+          resource: this.renderer.storageTexture.createView(),
+        },
+        {
+          binding: 2,
+          resource: this.sampler,
         },
       ],
     });

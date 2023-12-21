@@ -5,6 +5,8 @@ struct Uniforms {
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var inputTexture: texture_2d<f32>;
+@group(0) @binding(2) var inputTextureSampler: sampler;
 
 @vertex
 fn vertexMain(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
@@ -49,8 +51,8 @@ fn fragmentMain(@builtin(position) coord: vec4f) -> @location(0) vec4f {
   // Apply a simple animation.
   // uv -= vec2f(0.5 * sin(uniforms.time * 0.5), 0.5 * cos(uniforms.time * 0.5));
   
-  // Get the color from the uv coordinates.
-  var color = vec3f(uv, 0.0);
+  // Get the color from the texture.
+  var color = textureSample(inputTexture, inputTextureSampler, uv).rgb;
   
   // Apply the ACES tonemapping.
   // color = acesTonemap(color);

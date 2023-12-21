@@ -14,8 +14,7 @@ async function main() {
 
   document.body.appendChild(renderer.canvas);
 
-  const input = new Float32Array([1, 2, 3]);
-  const raytracingPass = new RaytracingPass(renderer, input);
+  const raytracingPass = new RaytracingPass(renderer);
   const fullscreenPass = new FullscreenPass(renderer);
 
   const startTime = performance.now();
