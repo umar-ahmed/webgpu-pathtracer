@@ -14,6 +14,7 @@
   },
   "packageManager": "yarn@4.0.2",
   "dependencies": {
-    "@webgpu/types": "^0.1.40"
+    "@webgpu/types": "^0.1.40",
+    "webgpu-utils": "^1.0.2"
   }
 }

@@ -1276,8 +1276,16 @@ __metadata:
     "@webgpu/types": "npm:^0.1.40"
     typescript: "npm:^5.2.2"
     vite: "npm:^5.0.8"
+    webgpu-utils: "npm:^1.0.2"
   languageName: unknown
   linkType: soft
+
+"webgpu-utils@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "webgpu-utils@npm:1.0.2"
+  checksum: 464f818ac1a79d8dfd5cdcc299403bfd012b2695e6deb342fbd8b35725328d4d2aab8faa8f2ed22bd122fd4ed07a444cef89c1ab9c9d278397d212e68ae1f444
+  languageName: node
+  linkType: hard
 
 "which@npm:^2.0.1":
   version: 2.0.2
