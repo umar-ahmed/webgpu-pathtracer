@@ -10,16 +10,16 @@ export class FullscreenPass {
   private renderer: Renderer;
   private uniforms: StructuredView;
   private uniformsBuffer: GPUBuffer;
-  private uniformBindGroupLayout: GPUBindGroupLayout;
-  private uniformBindGroup: GPUBindGroup;
+  private bindGroupLayout: GPUBindGroupLayout;
+  private bindGroup: GPUBindGroup;
   private pipeline: GPURenderPipeline;
 
   constructor(renderer: Renderer) {
     this.renderer = renderer;
     this.uniforms = this.createUniforms();
     this.uniformsBuffer = this.createUniformsBuffer();
-    this.uniformBindGroupLayout = this.createUniformBindGroupLayout();
-    this.uniformBindGroup = this.createUniformBindGroup();
+    this.bindGroupLayout = this.createBindGroupLayout();
+    this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
   }
 
@@ -36,9 +36,9 @@ export class FullscreenPass {
     });
   }
 
-  private createUniformBindGroupLayout() {
+  private createBindGroupLayout() {
     return this.renderer.device.createBindGroupLayout({
-      label: "Uniform Bind Group Layout",
+      label: "Bind Group Layout",
       entries: [
         {
           binding: 0,
@@ -51,10 +51,10 @@ export class FullscreenPass {
     });
   }
 
-  private createUniformBindGroup() {
+  private createBindGroup() {
     return this.renderer.device.createBindGroup({
-      label: "Uniform Bind Group",
-      layout: this.uniformBindGroupLayout,
+      label: "Bind Group",
+      layout: this.bindGroupLayout,
       entries: [
         {
           binding: 0,
@@ -75,7 +75,7 @@ export class FullscreenPass {
     return this.renderer.device.createRenderPipeline({
       label: "Fullscreen Pipeline",
       layout: this.renderer.device.createPipelineLayout({
-        bindGroupLayouts: [this.uniformBindGroupLayout],
+        bindGroupLayouts: [this.bindGroupLayout],
       }),
       primitive: {
         topology: "triangle-list",
@@ -120,7 +120,7 @@ export class FullscreenPass {
       ],
     });
     renderPassEncoder.setPipeline(this.pipeline);
-    renderPassEncoder.setBindGroup(0, this.uniformBindGroup);
+    renderPassEncoder.setBindGroup(0, this.bindGroup);
     renderPassEncoder.draw(6);
     renderPassEncoder.end();
   }

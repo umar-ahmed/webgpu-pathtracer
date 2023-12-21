@@ -22,7 +22,27 @@ export class Renderer {
     }
   }
 
-  constructor(device: GPUDevice) {
+  static async create(): Promise<Renderer> {
+    const adapter = await navigator.gpu.requestAdapter();
+
+    const hasBGRA8unormStorage = adapter?.features.has("bgra8unorm-storage");
+
+    const device = await adapter?.requestDevice({
+      requiredFeatures: hasBGRA8unormStorage ? ["bgra8unorm-storage"] : [],
+    });
+
+    if (!device) {
+      throw new Error("WebGPU device not found.");
+    }
+
+    const format = hasBGRA8unormStorage
+      ? navigator.gpu.getPreferredCanvasFormat()
+      : "rgba8unorm";
+
+    return new Renderer(device, format);
+  }
+
+  constructor(device: GPUDevice, format: GPUTextureFormat) {
     this._canvas = document.createElement("canvas");
 
     const context = this._canvas.getContext("webgpu");
@@ -32,9 +52,9 @@ export class Renderer {
 
     this.context = context;
     this.device = device;
-    this.format = navigator.gpu.getPreferredCanvasFormat();
+    this.format = format;
 
-    this.context.configure({ device, format: this.format });
+    this.context.configure({ device, format });
   }
 
   setSize(width: number, height: number) {
