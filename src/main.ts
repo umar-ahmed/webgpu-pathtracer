@@ -278,6 +278,19 @@ async function main() {
   );
 
   resultBuffer.unmap();
+
+  const observer = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const canvas = entry.target as HTMLCanvasElement;
+      const width = entry.contentBoxSize[0].inlineSize;
+      const height = entry.contentBoxSize[0].blockSize;
+      canvas.width = width;
+      canvas.height = height;
+      render(performance.now());
+    }
+  });
+
+  observer.observe(canvas);
 }
 
 main().catch((err) => {
