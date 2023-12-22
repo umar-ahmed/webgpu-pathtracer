@@ -1,3 +1,8 @@
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) uv: vec2<f32>,
+}
+
 struct Uniforms {
   resolution: vec2<f32>,
   aspect: f32,
@@ -9,7 +14,7 @@ struct Uniforms {
 @group(0) @binding(2) var inputTextureSampler: sampler;
 
 @vertex
-fn vertexMain(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
+fn vertexMain(@builtin(vertex_index) i: u32) -> VertexOutput {
   let pos = array(
     vec2f(-1.0, -1.0),
     vec2f(1.0, -1.0),
@@ -18,13 +23,20 @@ fn vertexMain(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
     vec2f(1.0, 1.0),
     vec2f(-1.0, 1.0),
   );
-  return vec4f(pos[i], 0, 1);
-}
+  let uvs = array(
+    vec2f(0.0, 0.0),
+    vec2f(0.0, 1.0),
+    vec2f(1.0, 1.0),
+    vec2f(0.0, 0.0),
+    vec2f(1.0, 1.0),
+    vec2f(1.0, 0.0),
+  );
 
-fn getUv(coord: vec2f) -> vec2f {
-  var uv = coord / uniforms.resolution;
-  uv.y = 1.0 - uv.y;
-  return uv;
+  var output: VertexOutput;
+  output.position = vec4f(pos[i], 0, 1);
+  output.uv = uvs[i];
+
+  return output;
 }
 
 fn acesTonemap(color: vec3f) -> vec3f {
@@ -45,14 +57,17 @@ fn acesTonemap(color: vec3f) -> vec3f {
 }
 
 @fragment
-fn fragmentMain(@builtin(position) coord: vec4f) -> @location(0) vec4f {
-  var uv = getUv(coord.xy);
-  
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   // Apply a simple animation.
   // uv -= vec2f(0.5 * sin(uniforms.time * 0.5), 0.5 * cos(uniforms.time * 0.5));
+
+  var color: vec3f;
+
+  // Debug the UVs
+  color = vec3f(input.uv, 0.0);
   
   // Get the color from the texture.
-  var color = textureSample(inputTexture, inputTextureSampler, uv).rgb;
+  color = textureSample(inputTexture, inputTextureSampler, input.uv).rgb;
   
   // Apply the ACES tonemapping.
   // color = acesTonemap(color);

@@ -43,6 +43,8 @@ export class FullscreenPass {
       label: "Sampler",
       magFilter: "linear",
       minFilter: "linear",
+      addressModeU: "repeat",
+      addressModeV: "repeat",
     });
   }
 
@@ -62,7 +64,6 @@ export class FullscreenPass {
           visibility: GPUShaderStage.FRAGMENT,
           texture: {
             sampleType: "float",
-            viewDimension: "2d",
             multisampled: false,
           },
         },
@@ -124,6 +125,10 @@ export class FullscreenPass {
         targets: [{ format: this.renderer.format }],
       },
     });
+  }
+
+  public resize() {
+    this.bindGroup = this.createBindGroup();
   }
 
   public update({ time }: { time: number }) {

@@ -22,6 +22,7 @@ async function main() {
   function render(timestamp: DOMHighResTimeStamp) {
     // Update uniforms
     const time = (timestamp - startTime) / 1000;
+    raytracingPass.update({ time });
     fullscreenPass.update({ time });
 
     // Render
@@ -34,12 +35,13 @@ async function main() {
     renderer.device.queue.submit([commandBuffer]);
   }
 
-  render(startTime);
-
   const observer = new ResizeObserver(([entry]) => {
     const width = entry.contentBoxSize[0].inlineSize;
     const height = entry.contentBoxSize[0].blockSize;
-    renderer.setSize(width, height);
+
+    renderer.resize(width, height);
+    raytracingPass.resize();
+    fullscreenPass.resize();
 
     render(performance.now());
   });

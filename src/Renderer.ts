@@ -57,7 +57,11 @@ export class Renderer {
 
     this.context.configure({ device, format });
 
-    this.storageTexture = this.device.createTexture({
+    this.storageTexture = this.createStorageTexture();
+  }
+
+  private createStorageTexture() {
+    return this.device.createTexture({
       size: {
         width: this.canvas.width,
         height: this.canvas.height,
@@ -65,13 +69,19 @@ export class Renderer {
       },
       format: "rgba8unorm",
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
-      dimension: "2d",
     });
   }
 
-  setSize(width: number, height: number) {
+  resize(width: number, height: number) {
+    if (this.canvas.width === width && this.canvas.height === height) {
+      return;
+    }
+
     this._canvas.width = width;
     this._canvas.height = height;
+
+    this.storageTexture.destroy();
+    this.storageTexture = this.createStorageTexture();
   }
 
   get canvas(): HTMLCanvasElement {
