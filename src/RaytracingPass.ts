@@ -93,6 +93,7 @@ export class RaytracingPass {
   }
 
   public resize() {
+    // Re-create the bind group with the new storage texture view
     this.bindGroup = this.createBindGroup();
   }
 

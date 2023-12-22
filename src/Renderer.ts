@@ -80,7 +80,7 @@ export class Renderer {
     this._canvas.width = width;
     this._canvas.height = height;
 
-    this.storageTexture.destroy();
+    // Re-create the storage texture with the new size
     this.storageTexture = this.createStorageTexture();
   }
 
