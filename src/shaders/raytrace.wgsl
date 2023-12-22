@@ -20,7 +20,12 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
   let uv = getUv(globalId.xy);
 
-  let color = vec3f(uv, 0.0);
+  // Debug UVs
+  var color = vec3f(uv, 0.0);
+
+  // Moire pattern
+  let hv = vec2f(f32(globalId.x % 2), f32(globalId.y % 2));
+  color = vec3f(1, 0, 1) * hv.x + vec3f(0, 1, 0) * hv.y;
 
   textureStore(outputTexture, globalId.xy, vec4f(color, 1.0));
 }

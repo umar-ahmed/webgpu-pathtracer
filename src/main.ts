@@ -35,9 +35,24 @@ async function main() {
     renderer.device.queue.submit([commandBuffer]);
   }
 
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), max);
+
   const observer = new ResizeObserver(([entry]) => {
-    const width = entry.contentBoxSize[0].inlineSize;
-    const height = entry.contentBoxSize[0].blockSize;
+    const dpr = clamp(window.devicePixelRatio, 1, 2);
+    const maxDimension = renderer.device.limits.maxTextureDimension2D;
+    const width = clamp(
+      entry.devicePixelContentBoxSize?.[0].inlineSize ||
+        entry.contentBoxSize[0].inlineSize * dpr,
+      1,
+      maxDimension
+    );
+    const height = clamp(
+      entry.devicePixelContentBoxSize?.[0].blockSize ||
+        entry.contentBoxSize[0].blockSize * dpr,
+      1,
+      maxDimension
+    );
 
     renderer.resize(width, height);
     raytracingPass.resize();
@@ -46,7 +61,11 @@ async function main() {
     render(performance.now());
   });
 
-  observer.observe(renderer.canvas);
+  try {
+    observer.observe(renderer.canvas, { box: "device-pixel-content-box" });
+  } catch {
+    observer.observe(renderer.canvas, { box: "content-box" });
+  }
 }
 
 main().catch((err) => {
