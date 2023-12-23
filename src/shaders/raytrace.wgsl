@@ -86,7 +86,15 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // Hit
   let hit = raySphereIntersect(ray, sphere);
   if (hit.hit) {
-    color = hit.normal;
+    let lightPosition = vec3f(1.0, 1.0, 1.0);
+    let lightDirection = normalize(lightPosition - hit.position);
+    let lightIntensity = 1.0;
+    let lightColor = vec3f(1.0, 1.0, 1.0);
+    let lightAmbient = 0.2;
+    let lightDiffuse = max(0.0, dot(hit.normal, lightDirection));
+    let lightSpecular = pow(max(0.0, dot(hit.normal, reflect(-lightDirection, hit.normal))), 32.0);
+    let light = lightColor * (lightAmbient + lightDiffuse + lightSpecular) * lightIntensity;
+    color = light;
   }
 
   // Debug UVs
