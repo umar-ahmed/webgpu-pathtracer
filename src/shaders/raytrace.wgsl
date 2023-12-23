@@ -15,9 +15,14 @@ struct Ray {
   direction: vec3f,
 };
 
+struct Material {
+  color: vec3f,
+};
+
 struct Sphere {
   center: vec3f,
   radius: f32,
+  material: Material,
 };
 
 struct Hit {
@@ -25,6 +30,7 @@ struct Hit {
   position: vec3f,
   normal: vec3f,
   t: f32,
+  material: Material,
 };
 
 fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
@@ -35,14 +41,30 @@ fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
   let discriminant = b * b - 4.0 * a * c;
 
   if (discriminant < 0.0) {
-    return Hit(false, vec3f(0.0), vec3f(0.0), -1.0);
+    return Hit(false, vec3f(0.0), vec3f(0.0), -1.0, sphere.material);
   }
 
   let t = (-b - sqrt(discriminant)) / (2.0 * a);
   let position = ray.origin + ray.direction * t;
   let normal = (position - sphere.center) / sphere.radius;
 
-  return Hit(true, position, normal, t);
+  return Hit(true, position, normal, t, sphere.material);
+}
+
+fn raySceneIntersect(ray: Ray, scene: array<Sphere, 4>) -> Hit {
+  var closestHit: Hit;
+  closestHit.hit = false;
+  closestHit.t = -1.0;
+
+  for (var i = 0; i < 4; i++) {
+    let sphere = scene[i];
+    let hit = raySphereIntersect(ray, sphere);
+    if (hit.hit && (hit.t < closestHit.t || closestHit.hit == false)) {
+      closestHit = hit;
+    }
+  }
+
+  return closestHit;
 }
 
 fn cameraToRay(camera: Camera, uv: vec2f) -> Ray {
@@ -52,19 +74,29 @@ fn cameraToRay(camera: Camera, uv: vec2f) -> Ray {
   let l = -r;
   let u = l + (r - l) * uv.x;
   let v = b + (t - b) * uv.y;
+
+  // Construct a coordinate system from the camera's direction
+  let w = normalize(-camera.direction);
+  let u_dir = normalize(cross(vec3f(0.0, 1.0, 0.0), w));
+  let v_dir = cross(w, u_dir);
+
+  // Rotate the ray direction by the camera's orientation
+  let direction = normalize(u_dir * u + v_dir * v - w * uniforms.aspect);
+
   var ray: Ray;
   ray.origin = camera.position;
-  ray.direction = normalize(vec3f(u, v, -1.0));
+  ray.direction = direction;
+  
   return ray;
 }
-
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
-@group(0) @binding(1) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
 fn getUv(coord: vec2u) -> vec2f {
   var uv = vec2f(f32(coord.x) / uniforms.resolution.x, f32(coord.y) / uniforms.resolution.y);
   return uv;
 }
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
 @compute @workgroup_size(64)
 fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
@@ -76,29 +108,24 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
   var color = vec3f(0.0);
 
+  // Camera
+  let camera = Camera(vec3f(0.0, 0.0, -1.0), vec3f(0.0, 0.0, 1.0), 45.0);
+  
   // Scene
-  let camera = Camera(vec3f(0.0, 0.0, 1.0), vec3f(0.0, 0.0, -1.0), 45.0);
-  let sphere = Sphere(vec3f(0.0, 0.0, 0.0), 0.2);
+  let scene = array<Sphere, 4>(
+    Sphere(vec3f(-0.2, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0))),
+    Sphere(vec3f(0.0, 0.0, 0.0), 0.2, Material(vec3f(0.0, 1.0, 0.0))),
+    Sphere(vec3f(0.2, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0))),
+    Sphere(vec3f(0.0, -10.2, 0.0), 10.0, Material(vec3f(0.5, 0.5, 0.5))),
+  );
 
   // Ray
   let ray = cameraToRay(camera, uv);
 
   // Hit
-  let hit = raySphereIntersect(ray, sphere);
+  let hit = raySceneIntersect(ray, scene);
   if (hit.hit) {
-    let lightPosition = vec3f(1.0, 1.0, 1.0);
-    let lightDirection = normalize(lightPosition - hit.position);
-    let lightIntensity = 0.9;
-    let lightColor = vec3f(1.0, 0.8, 0.2);
-
-    let ambientIntensity = 0.2;
-    let ambientColor = vec3f(0.1, 0.3, 1.0);
-    
-    let lightDiffuse = lightIntensity * lightColor * max(0.0, dot(hit.normal, lightDirection));
-    let lightSpecular = lightIntensity * lightColor * pow(max(0.0, dot(hit.normal, reflect(-lightDirection, hit.normal))), 32.0);
-    let lightAmbient = ambientIntensity * ambientColor;
-
-    color = lightDiffuse + lightSpecular + lightAmbient;
+    color = hit.material.color;
   }
 
   // Debug UVs
@@ -107,6 +134,9 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // Debug resolution
   // let hv = vec2f(f32(globalId.x % 2), f32(globalId.y % 2));
   // color = vec3f(1, 0, 1) * hv.x + vec3f(0, 1, 0) * hv.y;
+
+  // Debug ray
+  // color = vec3f(ray.direction);
 
   textureStore(outputTexture, globalId.xy, vec4f(color, 1.0));
 }
