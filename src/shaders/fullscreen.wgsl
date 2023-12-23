@@ -25,11 +25,11 @@ fn vertexMain(@builtin(vertex_index) i: u32) -> VertexOutput {
   );
   let uvs = array(
     vec2f(0.0, 0.0),
-    vec2f(0.0, 1.0),
+    vec2f(1.0, 0.0),
     vec2f(1.0, 1.0),
     vec2f(0.0, 0.0),
     vec2f(1.0, 1.0),
-    vec2f(1.0, 0.0),
+    vec2f(0.0, 1.0),
   );
 
   var output: VertexOutput;
