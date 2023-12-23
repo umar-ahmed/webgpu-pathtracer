@@ -26,14 +26,16 @@ async function main() {
     fullscreenPass.update({ time });
 
     // Render
-    const commandEncoder = renderer.device.createCommandEncoder();
+    if (renderer.isSampling()) {
+      const commandEncoder = renderer.device.createCommandEncoder();
 
-    raytracingPass.render(commandEncoder);
-    raytracingPass.copyOutputTextureToPrev(commandEncoder);
-    fullscreenPass.render(commandEncoder);
+      raytracingPass.render(commandEncoder);
+      raytracingPass.copyOutputTextureToPrev(commandEncoder);
+      fullscreenPass.render(commandEncoder);
 
-    const commandBuffer = commandEncoder.finish();
-    renderer.device.queue.submit([commandBuffer]);
+      const commandBuffer = commandEncoder.finish();
+      renderer.device.queue.submit([commandBuffer]);
+    }
 
     requestAnimationFrame(render);
   }

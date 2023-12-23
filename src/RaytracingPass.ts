@@ -111,10 +111,14 @@ export class RaytracingPass {
   }
 
   public update({ time }: { time: number }) {
+    if (this.renderer.isSampling()) {
+      this.renderer.frame++;
+    }
+
     this.uniforms.set({
       resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
       aspect: this.renderer.canvas.width / this.renderer.canvas.height,
-      frame: ++this.renderer.frame,
+      frame: this.renderer.frame,
       time,
     });
 
@@ -128,16 +132,15 @@ export class RaytracingPass {
   }
 
   public render(commandEncoder: GPUCommandEncoder) {
+    const workgroupsX = Math.ceil(this.renderer.canvas.width / 8);
+    const workgroupsY = Math.ceil(this.renderer.canvas.height / 8);
+
     const computePassEncoder = commandEncoder.beginComputePass({
       label: "Compute Pass",
     });
     computePassEncoder.setPipeline(this.pipeline);
     computePassEncoder.setBindGroup(0, this.bindGroup);
-    computePassEncoder.dispatchWorkgroups(
-      this.renderer.canvas.width,
-      this.renderer.canvas.height,
-      1
-    );
+    computePassEncoder.dispatchWorkgroups(workgroupsX, workgroupsY, 1);
     computePassEncoder.end();
   }
 

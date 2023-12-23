@@ -1,4 +1,6 @@
 export class Renderer {
+  static MAX_SAMPLES = 100;
+
   private _canvas: HTMLCanvasElement;
   public context: GPUCanvasContext;
   public device: GPUDevice;
@@ -96,5 +98,9 @@ export class Renderer {
 
   get canvas(): HTMLCanvasElement {
     return this._canvas;
+  }
+
+  public isSampling() {
+    return this.frame <= Renderer.MAX_SAMPLES;
   }
 }
