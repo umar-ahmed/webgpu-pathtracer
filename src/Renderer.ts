@@ -4,6 +4,7 @@ export class Renderer {
   public device: GPUDevice;
   public format: GPUTextureFormat = "bgra8unorm";
   public storageTexture: GPUTexture;
+  public frame: number = 1;
 
   static async supported(): Promise<boolean> {
     if ("gpu" in navigator === false) {
@@ -79,6 +80,8 @@ export class Renderer {
 
     this._canvas.width = width;
     this._canvas.height = height;
+
+    this.frame = 1;
 
     // Re-create the storage texture with the new size
     this.storageTexture = this.createStorageTexture();

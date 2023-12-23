@@ -4,6 +4,7 @@ struct Uniforms {
   resolution: vec2f,
   aspect: f32,
   time: f32,
+  frame: u32,
 };
 
 struct Camera {
@@ -169,7 +170,8 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   let uv = getUv(globalId.xy);
 
   // Random seed
-  var seed = u32(globalId.x) + u32(globalId.y) * u32(uniforms.resolution.x);
+  let index = u32(globalId.x) + u32(globalId.y) * u32(uniforms.resolution.x);
+  var seed = index + uniforms.frame * 719393u;
 
   // Camera
   let camera = Camera(vec3f(0.0, 0.4, -2.0), vec3f(0.0, -0.2, 1.0), 45.0);
@@ -183,7 +185,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
     // Floor
     Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), vec3f(0.0, 0.0, 0.0), 0.0)),
     // Light
-    Sphere(vec3f(4.0, 3.5, 10.0), 5.0, Material(vec3f(0.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 2.0))
+    Sphere(vec3f(4.0, 3.5, 10.0), 5.0, Material(vec3f(0.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 4.0))
   );
 
   // Ray

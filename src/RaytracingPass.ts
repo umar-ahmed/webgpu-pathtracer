@@ -101,6 +101,7 @@ export class RaytracingPass {
     this.uniforms.set({
       resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
       aspect: this.renderer.canvas.width / this.renderer.canvas.height,
+      frame: ++this.renderer.frame,
       time,
     });
 
