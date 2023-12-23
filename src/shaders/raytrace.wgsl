@@ -4,6 +4,12 @@ struct Uniforms {
   time: f32,
 };
 
+struct Camera {
+  position: vec3f,
+  direction: vec3f,
+  fov: f32,
+};
+
 struct Ray {
   origin: vec3f,
   direction: vec3f,
@@ -39,6 +45,19 @@ fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
   return Hit(true, position, normal, t);
 }
 
+fn cameraToRay(camera: Camera, uv: vec2f) -> Ray {
+  let t = tan(radians(camera.fov) / 2.0);
+  let r = uniforms.aspect * t;
+  let b = -t;
+  let l = -r;
+  let u = l + (r - l) * uv.x;
+  let v = b + (t - b) * uv.y;
+  var ray: Ray;
+  ray.origin = camera.position;
+  ray.direction = normalize(vec3f(u, v, -1.0));
+  return ray;
+}
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
@@ -58,32 +77,16 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   var color = vec3f(0.0);
 
   // Scene
-  let sphere = Sphere(vec3f(0.0, 0.0, 0.0), 0.3);
+  let camera = Camera(vec3f(0.0, 0.0, 1.0), vec3f(0.0, 0.0, -1.0), 45.0);
+  let sphere = Sphere(vec3f(0.0, 0.0, 0.0), 0.2);
 
-  // Camera Ray (perspective)
-  var ray: Ray;
-  ray.origin = vec3f(0.0, 0.0, -1.0);
-  
-  let viewportHeight = 2.0;
-  let viewportWidth = viewportHeight / uniforms.aspect;
-  let focalLength = 1.0;
-  let horizontal = vec3f(viewportWidth, 0.0, 0.0);
-  let vertical = vec3f(0.0, viewportHeight, 0.0);
-  let lowerLeftCorner = ray.origin - horizontal / 2.0 - vertical / 2.0 - vec3f(0.0, 0.0, focalLength);
-
-  ray.direction = lowerLeftCorner + horizontal * uv.x + vertical * uv.y - ray.origin;
+  // Ray
+  let ray = cameraToRay(camera, uv);
 
   // Hit
   let hit = raySphereIntersect(ray, sphere);
-
   if (hit.hit) {
-    // Diffuse shading
-    let normal = hit.normal;
-    let lightDir = normalize(vec3f(-1.0, 1.0, 1.0));
-    let lightIntensity = 1.0;
-    let ambientLightIntensity = 0.1;
-    let diffuse = max(dot(normal, lightDir), 0.0) * lightIntensity + ambientLightIntensity;
-    color = vec3f(diffuse);
+    color = hit.normal;
   }
 
   // Debug UVs
