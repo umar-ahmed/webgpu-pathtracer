@@ -131,6 +131,29 @@ fn randHemisphere(seed: ptr<function, u32>, normal: vec3f) -> vec3f {
   return direction * sign(dot(direction, normal));
 }
 
+fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 5>, maxBounces: i32) -> vec3f {
+  var traceRay = ray;
+  
+  var incomingLight = vec3f(0.0);
+  var rayColor = vec3f(1.0);
+
+  for (var i = 0; i < maxBounces; i++) {
+    let hit = raySceneIntersect(traceRay, scene);
+    if (hit.hit) {
+      traceRay.origin = hit.position;
+      traceRay.direction = randHemisphere(seed, hit.normal);
+
+      let emittedLight = hit.material.emissionColor * hit.material.emissionStrength;
+      incomingLight += emittedLight * rayColor;
+      rayColor *= hit.material.color;
+    } else {
+      break;
+    }
+  }
+
+  return incomingLight;
+}
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
@@ -149,43 +172,33 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   var seed = u32(globalId.x) + u32(globalId.y) * u32(uniforms.resolution.x);
 
   // Camera
-  let camera = Camera(vec3f(0.0, 0.0, -2.0), vec3f(0.0, 0.0, 1.0), 45.0);
+  let camera = Camera(vec3f(0.0, 0.4, -2.0), vec3f(0.0, -0.2, 1.0), 45.0);
   
   // Scene
   let scene = array<Sphere, 5>(
     // Subject
-    Sphere(vec3f(-0.4, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.0, 0.0, 0.0), 0.2, Material(vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.4, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0), vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0), vec3f(0.0, 0.0, 0.0), 0.0)),
     // Floor
     Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), vec3f(0.0, 0.0, 0.0), 0.0)),
     // Light
-    Sphere(vec3f(0.0, 1.5, 0.0), 1.0, Material(vec3f(0.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 2.0))
+    Sphere(vec3f(4.0, 3.5, 10.0), 5.0, Material(vec3f(0.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 2.0))
   );
 
   // Ray
   var ray = cameraToRay(camera, uv);
 
   // Hit
+  let maxBounces = 4;
+  let raysPerPixel = 10;
   var incomingLight = vec3f(0.0);
-  var rayColor = vec3f(1.0);
-  let maxBounces = 10;
-  
-  for (var i = 0; i < maxBounces; i++) {
-    let hit = raySceneIntersect(ray, scene);
-    if (hit.hit) {
-      ray.origin = hit.position;
-      ray.direction = randHemisphere(&seed, hit.normal);
 
-      let emittedLight = hit.material.emissionColor * hit.material.emissionStrength;
-      incomingLight += emittedLight * rayColor;
-      rayColor *= hit.material.color;
-    } else {
-      break;
-    }
+  for (var i = 0; i < raysPerPixel; i++) {
+    incomingLight += trace(&seed, ray, scene, maxBounces);
   }
 
-  color = incomingLight;
+  color = incomingLight / f32(raysPerPixel);
 
   // Debug UVs
   // color = vec3f(uv, 0.0);
