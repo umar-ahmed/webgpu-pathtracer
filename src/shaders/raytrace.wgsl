@@ -1,3 +1,5 @@
+const PI = 3.1415926535897932384626433832795;
+
 struct Uniforms {
   resolution: vec2f,
   aspect: f32,
@@ -17,6 +19,8 @@ struct Ray {
 
 struct Material {
   color: vec3f,
+  emissionColor: vec3f,
+  emissionStrength: f32,
 };
 
 struct Sphere {
@@ -56,12 +60,12 @@ fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
   return hit;
 }
 
-fn raySceneIntersect(ray: Ray, scene: array<Sphere, 4>) -> Hit {
+fn raySceneIntersect(ray: Ray, scene: array<Sphere, 5>) -> Hit {
   var closestHit: Hit;
   closestHit.hit = false;
   closestHit.t = -1.0;
 
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 5; i++) {
     let sphere = scene[i];
     let hit = raySphereIntersect(ray, sphere);
     if (hit.hit && (hit.t < closestHit.t || closestHit.hit == false)) {
@@ -100,6 +104,33 @@ fn getUv(coord: vec2u) -> vec2f {
   return uv;
 }
 
+// Random functions based on Sebastian Lague's video: https://www.youtube.com/watch?v=Qz0KTGYJtUk
+fn rand(seed: ptr<function, u32>) -> f32 {
+  (*seed) = (*seed) * 747796405u + 2891336453u;
+  let newSeed = *seed;
+  var result: u32 = ((newSeed >> ((newSeed >> 28u) + 4u)) ^ newSeed) * 277803737u;
+  result = (result >> 22u) ^ result;
+  return f32(result) / 4294967295.0;
+}
+
+fn randNormal(seed: ptr<function, u32>) -> f32 {
+  let theta = 2.0 * PI * rand(seed);
+  let rho = sqrt(-2.0 * log(rand(seed)));
+  return rho * cos(theta);
+}
+
+fn randDirection(seed: ptr<function, u32>) -> vec3f {
+  let x = randNormal(seed);
+  let y = randNormal(seed);
+  let z = randNormal(seed);
+  return normalize(vec3f(x, y, z));
+}
+
+fn randHemisphere(seed: ptr<function, u32>, normal: vec3f) -> vec3f {
+  let direction = randDirection(seed);
+  return direction * sign(dot(direction, normal));
+}
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
@@ -114,25 +145,47 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // Calculate UV coordinates
   let uv = getUv(globalId.xy);
 
+  // Random seed
+  var seed = u32(globalId.x) + u32(globalId.y) * u32(uniforms.resolution.x);
+
   // Camera
-  let camera = Camera(vec3f(0.0, 0.0, -3.0), vec3f(0.0, 0.0, 1.0), 45.0);
+  let camera = Camera(vec3f(0.0, 0.0, -2.0), vec3f(0.0, 0.0, 1.0), 45.0);
   
   // Scene
-  let scene = array<Sphere, 4>(
-    Sphere(vec3f(-0.2, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0))),
-    Sphere(vec3f(0.0, 0.0, 0.1), 0.2, Material(vec3f(0.0, 1.0, 0.0))),
-    Sphere(vec3f(0.2, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0))),
-    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5))),
+  let scene = array<Sphere, 5>(
+    // Subject
+    Sphere(vec3f(-0.4, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, 0.0, 0.0), 0.2, Material(vec3f(0.0, 1.0, 0.0), vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.4, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0), vec3f(0.0, 0.0, 0.0), 0.0)),
+    // Floor
+    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), vec3f(0.0, 0.0, 0.0), 0.0)),
+    // Light
+    Sphere(vec3f(0.0, 1.5, 0.0), 1.0, Material(vec3f(0.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 2.0))
   );
 
   // Ray
-  let ray = cameraToRay(camera, uv);
+  var ray = cameraToRay(camera, uv);
 
   // Hit
-  let hit = raySceneIntersect(ray, scene);
-  if (hit.hit) {
-    color = hit.material.color;
+  var incomingLight = vec3f(0.0);
+  var rayColor = vec3f(1.0);
+  let maxBounces = 10;
+  
+  for (var i = 0; i < maxBounces; i++) {
+    let hit = raySceneIntersect(ray, scene);
+    if (hit.hit) {
+      ray.origin = hit.position;
+      ray.direction = randHemisphere(&seed, hit.normal);
+
+      let emittedLight = hit.material.emissionColor * hit.material.emissionStrength;
+      incomingLight += emittedLight * rayColor;
+      rayColor *= hit.material.color;
+    } else {
+      break;
+    }
   }
+
+  color = incomingLight;
 
   // Debug UVs
   // color = vec3f(uv, 0.0);
@@ -143,6 +196,12 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
   // Debug ray
   // color = vec3f(ray.direction);
+
+  // Debug RNG
+  // color = vec3f(rand(&seed));
+  // color = vec3f(randNormal(&seed));
+  // color = randDirection(&seed);
+  // color = randHemisphere(&seed, vec3f(0.0, 1.0, 0.0));
 
   textureStore(outputTexture, globalId.xy, vec4f(color, 1.0));
 }
