@@ -56,6 +56,10 @@ fn acesTonemap(color: vec3f) -> vec3f {
   return pow(clamp(m2 * (a / b), vec3f(0.0), vec3f(1.0)), vec3f(1.0 / 2.2));
 }
 
+fn reinhardTonemap(color: vec3f) -> vec3f {
+  return color / (color + vec3f(1.0));
+}
+
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   // Apply a simple animation.
@@ -70,7 +74,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   color = textureSample(inputTexture, inputTextureSampler, input.uv).rgb;
   
   // Apply the ACES tonemapping.
-  // color = acesTonemap(color);
+  color = acesTonemap(color);
+  // color = reinhardTonemap(color);
 
   return vec4f(color, 1);
 }

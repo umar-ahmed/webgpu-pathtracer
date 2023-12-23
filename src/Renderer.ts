@@ -1,5 +1,5 @@
 export class Renderer {
-  static MAX_SAMPLES = 100;
+  static MAX_SAMPLES = 256;
 
   private _canvas: HTMLCanvasElement;
   public context: GPUCanvasContext;

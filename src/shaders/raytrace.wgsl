@@ -20,6 +20,7 @@ struct Ray {
 
 struct Material {
   color: vec3f,
+  roughness: f32,
   emissionColor: vec3f,
   emissionStrength: f32,
 };
@@ -132,6 +133,10 @@ fn randHemisphere(seed: ptr<function, u32>, normal: vec3f) -> vec3f {
   return direction * sign(dot(direction, normal));
 }
 
+fn randCosineWeightedHemisphere(seed: ptr<function, u32>, normal: vec3f) -> vec3f {
+  return normalize(normal + randDirection(seed));
+}
+
 fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 5>, maxBounces: i32) -> vec3f {
   var traceRay = ray;
   
@@ -142,7 +147,9 @@ fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 5>, maxBounces
     let hit = raySceneIntersect(traceRay, scene);
     if (hit.hit) {
       traceRay.origin = hit.position;
-      traceRay.direction = randHemisphere(seed, hit.normal);
+      let diffuseDirection = randCosineWeightedHemisphere(seed, hit.normal);
+      let specularDirection = reflect(traceRay.direction, hit.normal);
+      traceRay.direction = mix(specularDirection, diffuseDirection, hit.material.roughness);
 
       let emittedLight = hit.material.emissionColor * hit.material.emissionStrength;
       incomingLight += emittedLight * rayColor;
@@ -180,13 +187,13 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // Scene
   let scene = array<Sphere, 5>(
     // Subject
-    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.0, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0), vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0), 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, Material(vec3f(1.0, 1.0, 1.0), 0.1, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0), 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     // Floor
-    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     // Light
-    Sphere(vec3f(4.0, 3.5, 10.0), 5.0, Material(vec3f(0.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 6.0))
+    Sphere(vec3f(8.0, 3.5, 4.0), 6.0, Material(vec3f(0.0, 0.0, 0.0), 1.0, vec3f(1.0, 1.0, 1.0), 8.0))
   );
 
   // Ray
@@ -194,7 +201,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
   // Hit
   let maxBounces = 4;
-  let raysPerPixel = 10;
+  let raysPerPixel = 8;
   var incomingLight = vec3f(0.0);
 
   for (var i = 0; i < raysPerPixel; i++) {
