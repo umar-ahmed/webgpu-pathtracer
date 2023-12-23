@@ -55,6 +55,15 @@ export class RaytracingPass {
             format: "rgba8unorm",
           },
         },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.COMPUTE,
+          texture: {
+            viewDimension: "2d",
+            sampleType: "float",
+            multisampled: false,
+          },
+        },
       ],
     });
   }
@@ -72,7 +81,11 @@ export class RaytracingPass {
         },
         {
           binding: 1,
-          resource: this.renderer.storageTexture.createView(),
+          resource: this.renderer.outputTexture.createView(),
+        },
+        {
+          binding: 2,
+          resource: this.renderer.outputTexturePrev.createView(),
         },
       ],
     });
@@ -126,5 +139,13 @@ export class RaytracingPass {
       1
     );
     computePassEncoder.end();
+  }
+
+  public copyOutputTextureToPrev(commandEncoder: GPUCommandEncoder) {
+    commandEncoder.copyTextureToTexture(
+      { texture: this.renderer.outputTexture, mipLevel: 0 },
+      { texture: this.renderer.outputTexturePrev },
+      [this.renderer.canvas.width, this.renderer.canvas.height, 1]
+    );
   }
 }

@@ -91,7 +91,7 @@ export class FullscreenPass {
         },
         {
           binding: 1,
-          resource: this.renderer.storageTexture.createView(),
+          resource: this.renderer.outputTexture.createView(),
         },
         {
           binding: 2,

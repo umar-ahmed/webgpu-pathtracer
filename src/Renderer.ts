@@ -3,7 +3,8 @@ export class Renderer {
   public context: GPUCanvasContext;
   public device: GPUDevice;
   public format: GPUTextureFormat = "bgra8unorm";
-  public storageTexture: GPUTexture;
+  public outputTexture: GPUTexture;
+  public outputTexturePrev: GPUTexture;
   public frame: number = 1;
 
   static async supported(): Promise<boolean> {
@@ -58,7 +59,8 @@ export class Renderer {
 
     this.context.configure({ device, format });
 
-    this.storageTexture = this.createStorageTexture();
+    this.outputTexture = this.createStorageTexture();
+    this.outputTexturePrev = this.createStorageTexture();
   }
 
   private createStorageTexture() {
@@ -69,7 +71,11 @@ export class Renderer {
         depthOrArrayLayers: 1,
       },
       format: "rgba8unorm",
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+      usage:
+        GPUTextureUsage.STORAGE_BINDING |
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.COPY_SRC,
     });
   }
 
@@ -84,7 +90,8 @@ export class Renderer {
     this.frame = 1;
 
     // Re-create the storage texture with the new size
-    this.storageTexture = this.createStorageTexture();
+    this.outputTexture = this.createStorageTexture();
+    this.outputTexturePrev = this.createStorageTexture();
   }
 
   get canvas(): HTMLCanvasElement {

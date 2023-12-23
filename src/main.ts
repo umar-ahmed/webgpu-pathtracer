@@ -29,10 +29,13 @@ async function main() {
     const commandEncoder = renderer.device.createCommandEncoder();
 
     raytracingPass.render(commandEncoder);
+    raytracingPass.copyOutputTextureToPrev(commandEncoder);
     fullscreenPass.render(commandEncoder);
 
     const commandBuffer = commandEncoder.finish();
     renderer.device.queue.submit([commandBuffer]);
+
+    requestAnimationFrame(render);
   }
 
   const clamp = (value: number, min: number, max: number) =>
