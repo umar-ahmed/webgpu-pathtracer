@@ -88,13 +88,17 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   if (hit.hit) {
     let lightPosition = vec3f(1.0, 1.0, 1.0);
     let lightDirection = normalize(lightPosition - hit.position);
-    let lightIntensity = 1.0;
-    let lightColor = vec3f(1.0, 1.0, 1.0);
-    let lightAmbient = 0.2;
-    let lightDiffuse = max(0.0, dot(hit.normal, lightDirection));
-    let lightSpecular = pow(max(0.0, dot(hit.normal, reflect(-lightDirection, hit.normal))), 32.0);
-    let light = lightColor * (lightAmbient + lightDiffuse + lightSpecular) * lightIntensity;
-    color = light;
+    let lightIntensity = 0.9;
+    let lightColor = vec3f(1.0, 0.8, 0.2);
+
+    let ambientIntensity = 0.2;
+    let ambientColor = vec3f(0.1, 0.3, 1.0);
+    
+    let lightDiffuse = lightIntensity * lightColor * max(0.0, dot(hit.normal, lightDirection));
+    let lightSpecular = lightIntensity * lightColor * pow(max(0.0, dot(hit.normal, reflect(-lightDirection, hit.normal))), 32.0);
+    let lightAmbient = ambientIntensity * ambientColor;
+
+    color = lightDiffuse + lightSpecular + lightAmbient;
   }
 
   // Debug UVs
