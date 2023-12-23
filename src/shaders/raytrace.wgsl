@@ -34,21 +34,26 @@ struct Hit {
 };
 
 fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
+  var hit = Hit(false, vec3f(0.0), vec3f(0.0), -1.0, sphere.material);
+
   let oc = ray.origin - sphere.center;
   let a = dot(ray.direction, ray.direction);
   let b = 2.0 * dot(oc, ray.direction);
   let c = dot(oc, oc) - sphere.radius * sphere.radius;
   let discriminant = b * b - 4.0 * a * c;
 
-  if (discriminant < 0.0) {
-    return Hit(false, vec3f(0.0), vec3f(0.0), -1.0, sphere.material);
+  if (discriminant >= 0.0) {
+    var t = (-b - sqrt(discriminant)) / (2.0 * a);
+
+    if (t >= 0.0) {
+      hit.hit = true;
+      hit.position = ray.origin + t * ray.direction;
+      hit.normal = normalize(hit.position - sphere.center);
+      hit.t = t;
+    }
   }
 
-  let t = (-b - sqrt(discriminant)) / (2.0 * a);
-  let position = ray.origin + ray.direction * t;
-  let normal = (position - sphere.center) / sphere.radius;
-
-  return Hit(true, position, normal, t, sphere.material);
+  return hit;
 }
 
 fn raySceneIntersect(ray: Ray, scene: array<Sphere, 4>) -> Hit {
@@ -103,20 +108,21 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   if (globalId.x >= u32(uniforms.resolution.x) || globalId.y >= u32(uniforms.resolution.y)) {
     return;
   }
-
-  let uv = getUv(globalId.xy);
-
+  
   var color = vec3f(0.0);
 
+  // Calculate UV coordinates
+  let uv = getUv(globalId.xy);
+
   // Camera
-  let camera = Camera(vec3f(0.0, 0.0, -1.0), vec3f(0.0, 0.0, 1.0), 45.0);
+  let camera = Camera(vec3f(0.0, 0.0, -3.0), vec3f(0.0, 0.0, 1.0), 45.0);
   
   // Scene
   let scene = array<Sphere, 4>(
     Sphere(vec3f(-0.2, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0))),
-    Sphere(vec3f(0.0, 0.0, 0.0), 0.2, Material(vec3f(0.0, 1.0, 0.0))),
+    Sphere(vec3f(0.0, 0.0, 0.1), 0.2, Material(vec3f(0.0, 1.0, 0.0))),
     Sphere(vec3f(0.2, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0))),
-    Sphere(vec3f(0.0, -10.2, 0.0), 10.0, Material(vec3f(0.5, 0.5, 0.5))),
+    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5))),
   );
 
   // Ray
