@@ -1,3 +1,7 @@
+const PI: f32 = 3.141592653589793;
+const INV_PI: f32 = 0.31830988618379067153776752674503;
+const INV_SQRT_OF_2PI: f32 = 0.39894228040143267793994605993439;
+
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
   @location(0) uv: vec2<f32>,
@@ -39,6 +43,42 @@ fn vertexMain(@builtin(vertex_index) i: u32) -> VertexOutput {
   return output;
 }
 
+// https://github.com/visionary-3d/raytracing-bloom-video/blob/main/src/render/passes/shaders/quad.wgsl
+fn denoise(tex: texture_2d<f32>, uv: vec2f, sigma: f32, kSigma: f32, threshold: f32) -> vec4<f32> {
+    let radius: f32 = round(kSigma * sigma);
+    let radQ: f32 = radius * radius;
+
+    let invSigmaQx2: f32 = 0.5 / (sigma * sigma);
+    let invSigmaQx2PI: f32 = INV_PI * invSigmaQx2;
+
+    let invThresholdSqx2: f32 = 0.5 / (threshold * threshold);
+    let invThresholdSqrt2PI: f32 = INV_SQRT_OF_2PI / threshold;
+
+    let centrPx: vec4<f32> = textureSample(tex, inputTextureSampler, uv);
+
+    var zBuff: f32 = 0.0;
+    var aBuff: vec4<f32> = vec4<f32>(0.0);
+    let size: vec2<f32> = uniforms.resolution;
+
+    for (var x: f32 = -radius; x <= radius; x = x + 1.0) {
+        let pt: f32 = sqrt(radQ - x * x);
+        for (var y: f32 = -pt; y <= pt; y = y + 1.0) {
+            let d: vec2<f32> = vec2<f32>(x, y);
+
+            let blurFactor: f32 = exp(-dot(d, d) * invSigmaQx2) * invSigmaQx2PI;
+
+            let walkPx: vec4<f32> = textureSample(tex, inputTextureSampler, uv + d / size);
+
+            let dC: vec4<f32> = walkPx - centrPx;
+            let deltaFactor: f32 = exp(-dot(dC, dC) * invThresholdSqx2) * invThresholdSqrt2PI * blurFactor;
+
+            zBuff = zBuff + deltaFactor;
+            aBuff = aBuff + deltaFactor * walkPx;
+        }
+    }
+    return aBuff / zBuff;
+}
+
 fn acesTonemap(color: vec3f) -> vec3f {
   let m1 = mat3x3f(
       vec3f(0.59719, 0.07600, 0.02840),
@@ -72,6 +112,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   
   // Get the color from the texture.
   color = textureSample(inputTexture, inputTextureSampler, input.uv).rgb;
+
+  // Denoise the texture.
+  color = denoise(inputTexture, input.uv, 5.0, 1.0, 0.08).rgb;
   
   // Apply the ACES tonemapping.
   color = acesTonemap(color);
