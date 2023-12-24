@@ -1,3 +1,5 @@
+import noiseBase64 from "./assets/noise";
+
 export class Renderer {
   static MAX_SAMPLES = 256;
 
@@ -7,6 +9,7 @@ export class Renderer {
   public format: GPUTextureFormat = "bgra8unorm";
   public outputTexture: GPUTexture;
   public outputTexturePrev: GPUTexture;
+  public noiseTexture: GPUTexture;
   public frame: number = 1;
   public maxBounces: number = 8;
   public samplesPerPixel: number = 4;
@@ -46,10 +49,45 @@ export class Renderer {
       ? navigator.gpu.getPreferredCanvasFormat()
       : "rgba8unorm";
 
-    return new Renderer(device, format);
+    const noiseTexture = await Renderer.loadNoiseTexture(device);
+    const renderer = new Renderer(device, format, noiseTexture);
+
+    return renderer;
   }
 
-  constructor(device: GPUDevice, format: GPUTextureFormat) {
+  private static async loadNoiseTexture(device: GPUDevice) {
+    const image = new Image();
+    image.src = noiseBase64;
+    await image.decode();
+
+    const source = await createImageBitmap(image);
+
+    const texture = device.createTexture({
+      label: "Noise Texture",
+      format: "rgba8unorm",
+      size: [source.width, source.height],
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    device.queue.copyExternalImageToTexture(
+      { source, flipY: true },
+      { texture },
+      { width: source.width, height: source.height }
+    );
+
+    await device.queue.onSubmittedWorkDone();
+
+    return texture;
+  }
+
+  private constructor(
+    device: GPUDevice,
+    format: GPUTextureFormat,
+    noiseTexture: GPUTexture
+  ) {
     this._canvas = document.createElement("canvas");
 
     const context = this._canvas.getContext("webgpu");
@@ -65,6 +103,7 @@ export class Renderer {
 
     this.outputTexture = this.createStorageTexture();
     this.outputTexturePrev = this.createStorageTexture();
+    this.noiseTexture = noiseTexture;
   }
 
   private createStorageTexture() {

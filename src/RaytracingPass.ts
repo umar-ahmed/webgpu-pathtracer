@@ -50,13 +50,22 @@ export class RaytracingPass {
         {
           binding: 1,
           visibility: GPUShaderStage.COMPUTE,
+          texture: {
+            viewDimension: "2d",
+            sampleType: "float",
+            multisampled: false,
+          },
+        },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.COMPUTE,
           storageTexture: {
             access: "write-only",
             format: "rgba8unorm",
           },
         },
         {
-          binding: 2,
+          binding: 3,
           visibility: GPUShaderStage.COMPUTE,
           texture: {
             viewDimension: "2d",
@@ -81,10 +90,14 @@ export class RaytracingPass {
         },
         {
           binding: 1,
-          resource: this.renderer.outputTexture.createView(),
+          resource: this.renderer.noiseTexture.createView(),
         },
         {
           binding: 2,
+          resource: this.renderer.outputTexture.createView(),
+        },
+        {
+          binding: 3,
           resource: this.renderer.outputTexturePrev.createView(),
         },
       ],
