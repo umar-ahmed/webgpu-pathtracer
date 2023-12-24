@@ -21,6 +21,7 @@ struct Ray {
 struct Material {
   color: vec3f,
   roughness: f32,
+  metalness: f32,
   emissionColor: vec3f,
   emissionStrength: f32,
 };
@@ -137,19 +138,27 @@ fn randCosineWeightedHemisphere(seed: ptr<function, u32>, normal: vec3f) -> vec3
   return normalize(normal + randDirection(seed));
 }
 
+fn randPointInCircle(seed: ptr<function, u32>) -> vec2f {
+  let theta = 2.0 * PI * rand(seed);
+  let rho = sqrt(rand(seed));
+  return vec2f(rho * cos(theta), rho * sin(theta));
+}
+
 fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 5>, maxBounces: i32) -> vec3f {
   var traceRay = ray;
-  
   var incomingLight = vec3f(0.0);
   var rayColor = vec3f(1.0);
 
   for (var i = 0; i < maxBounces; i++) {
     let hit = raySceneIntersect(traceRay, scene);
     if (hit.hit) {
-      traceRay.origin = hit.position;
       let diffuseDirection = randCosineWeightedHemisphere(seed, hit.normal);
       let specularDirection = reflect(traceRay.direction, hit.normal);
-      traceRay.direction = mix(specularDirection, diffuseDirection, hit.material.roughness);
+      
+      // Calculate ray direction based on material properties
+      let specularWeight = hit.material.metalness * (1.0 - hit.material.roughness);
+      traceRay.origin = hit.position;
+      traceRay.direction = mix(diffuseDirection, specularDirection, specularWeight);
 
       let emittedLight = hit.material.emissionColor * hit.material.emissionStrength;
       incomingLight += emittedLight * rayColor;
@@ -187,24 +196,34 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // Scene
   let scene = array<Sphere, 5>(
     // Subject
-    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 0.0, 0.0), 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, Material(vec3f(1.0, 1.0, 1.0), 0.1, vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(0.0, 0.0, 1.0), 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, Material(vec3f(1.0, 1.0, 1.0), 0.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     // Floor
-    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     // Light
-    Sphere(vec3f(8.0, 3.5, 4.0), 6.0, Material(vec3f(0.0, 0.0, 0.0), 1.0, vec3f(1.0, 1.0, 1.0), 8.0))
+    Sphere(vec3f(8.0, 3.5, 4.0), 6.0, Material(vec3f(0.0, 0.0, 0.0), 1.0, 0.0, vec3f(1.0, 1.0, 1.0), 4.0))
   );
 
-  // Ray
-  var ray = cameraToRay(camera, uv);
-
-  // Hit
-  let maxBounces = 4;
+  // Trace rays
+  let maxBounces = 6;
   let raysPerPixel = 8;
+  let focalDistance = 2.0;
+  let aperture = 0.08;
+
   var incomingLight = vec3f(0.0);
 
   for (var i = 0; i < raysPerPixel; i++) {
+    var ray = cameraToRay(camera, uv);
+
+    // Depth of field + Anti-aliasing
+    let jitter = vec3f(randPointInCircle(&seed) * (1.0 / uniforms.resolution), 0.0);
+    let jitter2 = vec3f(randPointInCircle(&seed) * aperture, 0.0);
+    let focalPoint = ray.origin + ray.direction * focalDistance + jitter;
+    ray.origin += jitter2;
+    ray.direction = normalize(focalPoint - ray.origin);
+   
+    // Trace the ray
     incomingLight += trace(&seed, ray, scene, maxBounces);
   }
 
