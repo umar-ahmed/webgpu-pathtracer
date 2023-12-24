@@ -2,6 +2,8 @@ import noiseBase64 from "./assets/noise";
 
 export class Renderer {
   static MAX_SAMPLES = 256;
+  static MAX_BOUNCES: number = 8;
+  static SAMPLES_PER_PIXEL: number = 4;
 
   private _canvas: HTMLCanvasElement;
   public context: GPUCanvasContext;
@@ -11,8 +13,6 @@ export class Renderer {
   public outputTexturePrev: GPUTexture;
   public noiseTexture: GPUTexture;
   public frame: number = 1;
-  public maxBounces: number = 8;
-  public samplesPerPixel: number = 4;
 
   static async supported(): Promise<boolean> {
     if ("gpu" in navigator === false) {

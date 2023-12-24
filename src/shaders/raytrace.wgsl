@@ -5,15 +5,6 @@ const INVPI = 0.31830988618;
 const INVTWOPI = 0.15915494309;
 const INF = 1e20;
 
-struct Uniforms {
-  resolution: vec2f,
-  aspect: f32,
-  time: f32,
-  frame: u32,
-  maxBounces: i32,
-  samplesPerPixel: i32,
-};
-
 struct Camera {
   position: vec3f,
   direction: vec3f,
@@ -21,6 +12,7 @@ struct Camera {
   focalDistance: f32,
   aperture: f32,
 };
+
 
 struct Ray {
   origin: vec3f,
@@ -49,6 +41,17 @@ struct Hit {
   material: Material,
 };
 
+struct Uniforms {
+  resolution: vec2f,
+  aspect: f32,
+  time: f32,
+  frame: u32,
+  maxBounces: i32,
+  samplesPerPixel: i32,
+  camera: Camera,
+};
+
+
 fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
   var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, sphere.material);
 
@@ -72,12 +75,12 @@ fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
   return hit;
 }
 
-fn raySceneIntersect(ray: Ray, scene: array<Sphere, 5>) -> Hit {
+fn raySceneIntersect(ray: Ray, scene: array<Sphere, 6>) -> Hit {
   var closestHit: Hit;
   closestHit.hit = false;
   closestHit.t = INF;
 
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 6; i++) {
     let sphere = scene[i];
     let hit = raySphereIntersect(ray, sphere);
     if (hit.hit && hit.t < closestHit.t) {
@@ -153,7 +156,7 @@ fn randPointInCircle(seed: ptr<function, u32>) -> vec2f {
   return vec2f(rho * cos(theta), rho * sin(theta));
 }
 
-fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 5>, maxBounces: i32) -> vec3f {
+fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 6>, maxBounces: i32) -> vec3f {
   var traceRay = ray;
   var incomingLight = vec3f(0.0);
   var rayColor = vec3f(1.0);
@@ -197,20 +200,18 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   let uv = getUv(globalId.xy);
 
   // Random seed
-  let index = u32(globalId.x) + u32(globalId.y) * u32(uniforms.resolution.x);
+  let index = globalId.x + globalId.y * u32(uniforms.resolution.x);
   var seed = index + uniforms.frame * 719393u + SEED;
 
-  // Camera
-  let camera = Camera(vec3f(0.0, 0.4, -2.0), vec3f(0.0, -0.2, 1.0), 45.0, 2.0, 0.03);
-  
   // Scene
-  let scene = array<Sphere, 5>(
+  let scene = array<Sphere, 6>(
     // Subject
     Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     Sphere(vec3f(0.0, 0.2, 0.8), 0.4, Material(vec3f(1.0, 0.2, 0.4), 0.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     // Floor
     Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(-30.2, 0.0, 8.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     // Light
     Sphere(vec3f(8.0, 3.5, 4.0), 6.0, Material(vec3f(0.0, 0.0, 0.0), 1.0, 0.0, vec3f(1.0, 1.0, 1.0), 4.0))
   );
@@ -219,12 +220,12 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   var incomingLight = vec3f(0.0);
 
   for (var i = 0; i < uniforms.samplesPerPixel; i++) {
-    var ray = cameraToRay(camera, uv);
+    var ray = cameraToRay(uniforms.camera, uv);
 
     // Depth of field + Anti-aliasing
     let jitter = vec3f(randPointInCircle(&seed) * (1.0 / uniforms.resolution), 0.0);
-    let jitter2 = vec3f(randPointInCircle(&seed) * camera.aperture, 0.0);
-    let focalPoint = ray.origin + ray.direction * camera.focalDistance + jitter;
+    let jitter2 = vec3f(randPointInCircle(&seed) * uniforms.camera.aperture, 0.0);
+    let focalPoint = ray.origin + ray.direction * uniforms.camera.focalDistance + jitter;
     ray.origin += jitter2;
     ray.direction = normalize(focalPoint - ray.origin);
    

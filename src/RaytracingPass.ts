@@ -132,9 +132,16 @@ export class RaytracingPass {
       resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
       aspect: this.renderer.canvas.width / this.renderer.canvas.height,
       frame: this.renderer.frame,
-      maxBounces: this.renderer.maxBounces,
-      samplesPerPixel: this.renderer.samplesPerPixel,
+      maxBounces: Renderer.MAX_BOUNCES,
+      samplesPerPixel: Renderer.SAMPLES_PER_PIXEL,
       time,
+      camera: {
+        position: [0.0, 0.4, -2.0],
+        direction: [0.0, -0.2, 1.0],
+        fov: 45.0,
+        focalDistance: 2.0,
+        aperture: 0.03,
+      },
     });
 
     if (this.uniformsBuffer) {
