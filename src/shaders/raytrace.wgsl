@@ -1,6 +1,9 @@
 const SEED = 123456789u;
 const PI = 3.14159265359;
 const TWOPI = 6.28318530718;
+const INVPI = 0.31830988618;
+const INVTWOPI = 0.15915494309;
+const INF = 1e20;
 
 struct Uniforms {
   resolution: vec2f,
@@ -47,7 +50,7 @@ struct Hit {
 };
 
 fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
-  var hit = Hit(false, vec3f(0.0), vec3f(0.0), -1.0, sphere.material);
+  var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, sphere.material);
 
   let oc = ray.origin - sphere.center;
   let a = dot(ray.direction, ray.direction);
@@ -72,12 +75,12 @@ fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
 fn raySceneIntersect(ray: Ray, scene: array<Sphere, 5>) -> Hit {
   var closestHit: Hit;
   closestHit.hit = false;
-  closestHit.t = -1.0;
+  closestHit.t = INF;
 
   for (var i = 0; i < 5; i++) {
     let sphere = scene[i];
     let hit = raySphereIntersect(ray, sphere);
-    if (hit.hit && (hit.t < closestHit.t || closestHit.hit == false)) {
+    if (hit.hit && hit.t < closestHit.t) {
       closestHit = hit;
     }
   }
