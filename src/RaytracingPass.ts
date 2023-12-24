@@ -119,6 +119,8 @@ export class RaytracingPass {
       resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
       aspect: this.renderer.canvas.width / this.renderer.canvas.height,
       frame: this.renderer.frame,
+      maxBounces: this.renderer.maxBounces,
+      samplesPerPixel: this.renderer.samplesPerPixel,
       time,
     });
 

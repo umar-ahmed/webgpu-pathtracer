@@ -8,6 +8,8 @@ export class Renderer {
   public outputTexture: GPUTexture;
   public outputTexturePrev: GPUTexture;
   public frame: number = 1;
+  public maxBounces: number = 8;
+  public samplesPerPixel: number = 4;
 
   static async supported(): Promise<boolean> {
     if ("gpu" in navigator === false) {

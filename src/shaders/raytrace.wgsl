@@ -1,16 +1,22 @@
-const PI = 3.1415926535897932384626433832795;
+const SEED = 123456789u;
+const PI = 3.14159265359;
+const TWOPI = 6.28318530718;
 
 struct Uniforms {
   resolution: vec2f,
   aspect: f32,
   time: f32,
   frame: u32,
+  maxBounces: i32,
+  samplesPerPixel: i32,
 };
 
 struct Camera {
   position: vec3f,
   direction: vec3f,
   fov: f32,
+  focalDistance: f32,
+  aperture: f32,
 };
 
 struct Ray {
@@ -117,7 +123,7 @@ fn rand(seed: ptr<function, u32>) -> f32 {
 }
 
 fn randNormal(seed: ptr<function, u32>) -> f32 {
-  let theta = 2.0 * PI * rand(seed);
+  let theta = TWOPI * rand(seed);
   let rho = sqrt(-2.0 * log(rand(seed)));
   return rho * cos(theta);
 }
@@ -139,7 +145,7 @@ fn randCosineWeightedHemisphere(seed: ptr<function, u32>, normal: vec3f) -> vec3
 }
 
 fn randPointInCircle(seed: ptr<function, u32>) -> vec2f {
-  let theta = 2.0 * PI * rand(seed);
+  let theta = TWOPI * rand(seed);
   let rho = sqrt(rand(seed));
   return vec2f(rho * cos(theta), rho * sin(theta));
 }
@@ -188,10 +194,10 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
   // Random seed
   let index = u32(globalId.x) + u32(globalId.y) * u32(uniforms.resolution.x);
-  var seed = index + uniforms.frame * 719393u;
+  var seed = index + uniforms.frame * 719393u + SEED;
 
   // Camera
-  let camera = Camera(vec3f(0.0, 0.4, -2.0), vec3f(0.0, -0.2, 1.0), 45.0);
+  let camera = Camera(vec3f(0.0, 0.4, -2.0), vec3f(0.0, -0.2, 1.0), 45.0, 2.0, 0.03);
   
   // Scene
   let scene = array<Sphere, 5>(
@@ -206,28 +212,23 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   );
 
   // Trace rays
-  let maxBounces = 6;
-  let raysPerPixel = 8;
-  let focalDistance = 2.0;
-  let aperture = 0.03;
-
   var incomingLight = vec3f(0.0);
 
-  for (var i = 0; i < raysPerPixel; i++) {
+  for (var i = 0; i < uniforms.samplesPerPixel; i++) {
     var ray = cameraToRay(camera, uv);
 
     // Depth of field + Anti-aliasing
     let jitter = vec3f(randPointInCircle(&seed) * (1.0 / uniforms.resolution), 0.0);
-    let jitter2 = vec3f(randPointInCircle(&seed) * aperture, 0.0);
-    let focalPoint = ray.origin + ray.direction * focalDistance + jitter;
+    let jitter2 = vec3f(randPointInCircle(&seed) * camera.aperture, 0.0);
+    let focalPoint = ray.origin + ray.direction * camera.focalDistance + jitter;
     ray.origin += jitter2;
     ray.direction = normalize(focalPoint - ray.origin);
    
     // Trace the ray
-    incomingLight += trace(&seed, ray, scene, maxBounces);
+    incomingLight += trace(&seed, ray, scene, uniforms.maxBounces);
   }
 
-  color = incomingLight / f32(raysPerPixel);
+  color = incomingLight / f32(uniforms.samplesPerPixel);
 
   // Debug UVs
   // color = vec3f(uv, 0.0);
