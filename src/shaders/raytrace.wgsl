@@ -20,6 +20,7 @@ struct Ray {
 
 struct Material {
   color: vec3f,
+  specularColor: vec3f,
   roughness: f32,
   metalness: f32,
   emissionColor: vec3f,
@@ -166,15 +167,18 @@ fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 6>, maxBounces
     if (hit.hit) {
       let diffuseDirection = randCosineWeightedHemisphere(seed, hit.normal);
       let specularDirection = reflect(traceRay.direction, hit.normal);
+      var isSpecularBounce = 0.0;
+      if (hit.material.metalness >= rand(seed)) {
+        isSpecularBounce = 1.0;
+      }
       
       // Calculate ray direction based on material properties
-      let specularWeight = hit.material.metalness * (1.0 - hit.material.roughness);
       traceRay.origin = hit.position;
-      traceRay.direction = mix(diffuseDirection, specularDirection, specularWeight);
+      traceRay.direction = mix(diffuseDirection, specularDirection, isSpecularBounce * (1.0 - hit.material.roughness));
 
       let emittedLight = hit.material.emissionColor * hit.material.emissionStrength;
       incomingLight += emittedLight * rayColor;
-      rayColor *= hit.material.color;
+      rayColor *= mix(hit.material.color, hit.material.specularColor, isSpecularBounce);
     } else {
       break;
     }
@@ -204,16 +208,21 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   var seed = index + uniforms.frame * 719393u + SEED;
 
   // Scene
+  let floor = Material(vec3f(0.5, 0.5, 0.5), vec3f(1.0, 1.0, 1.0), 1.0, 0.01, vec3f(0.0, 0.0, 0.0), 0.0);
+  let light = Material(vec3f(0.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 1.0, 0.0, vec3f(1.0, 1.0, 1.0), 6.0);
+  let metal = Material(uniforms.color, vec3f(1.0, 1.0, 1.0), 0.0, 0.99, vec3f(0.0, 0.0, 0.0), 0.0);
+  let roughDiffuse = Material(uniforms.color, vec3f(1.0, 1.0, 1.0), 1.0, 0.02, vec3f(0.0, 0.0, 0.0), 0.0);
+  let smoothDiffuse = Material(uniforms.color, vec3f(1.0, 1.0, 1.0), 0.0, 0.03, vec3f(0.0, 0.0, 0.0), 0.0);
   let scene = array<Sphere, 6>(
     // Subject
-    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, Material(uniforms.color, 0.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, smoothDiffuse),
+    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, roughDiffuse),
+    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, metal),
     // Floor
-    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(-30.2, 0.0, 8.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, floor),
+    Sphere(vec3f(-30.2, 0.0, 8.0), 30.0, floor),
     // Light
-    Sphere(vec3f(8.0, 3.5, 4.0), 6.0, Material(vec3f(0.0, 0.0, 0.0), 1.0, 0.0, vec3f(1.0, 1.0, 1.0), 4.0))
+    Sphere(vec3f(8.0, 3.5, 4.0), 6.0, light)
   );
 
   // Trace rays
