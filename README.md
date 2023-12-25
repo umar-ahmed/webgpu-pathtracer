@@ -1,10 +1,19 @@
-# WebGPU Pathtracer
+<br />
 
-A simple pathtracer running in the browser using WebGPU.
+<h1 align="center">WebGPU Pathtracer</h1>
+<h3 align="center">✨ A simple pathtracer running in the browser using WebGPU. ✨</h3>
 
-[Live Demo](https://webgpu-pathtracer.vercel.app/)
+<br>
 
-![Screenshot](./screenshot.png)
+<p align="center">
+  <a href="https://webgpu-pathtracer.vercel.app/" target="_blank"><img  src="./screenshot.png" /></a>
+</p>
+<p align="middle">
+  <i>Click the image above to see the <a href="https://webgpu-pathtracer.vercel.app/">live demo!</a></i>
+</p>
+
+<br>
+
 
 ## Getting Started
 
