@@ -2,6 +2,10 @@ const PI: f32 = 3.141592653589793;
 const INV_PI: f32 = 0.31830988618379067153776752674503;
 const INV_SQRT_OF_2PI: f32 = 0.39894228040143267793994605993439;
 
+const TONEMAP_NONE: u32 = 0;
+const TONEMAP_ACES: u32 = 1;
+const TONEMAP_REINHARD: u32 = 2;
+
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
   @location(0) uv: vec2<f32>,
@@ -11,6 +15,8 @@ struct Uniforms {
   resolution: vec2<f32>,
   aspect: f32,
   time: f32,
+  denoise: u32,
+  tonemapping: u32,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -108,11 +114,16 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
   color = textureSample(inputTexture, inputTextureSampler, input.uv).rgb;
 
   // Denoise the texture.
-  color = denoise(inputTexture, input.uv, 5.0, 1.0, 0.08).rgb;
+  if (uniforms.denoise == 1) {
+    color = denoise(inputTexture, input.uv, 5.0, 1.0, 0.08).rgb;
+  }
   
-  // Apply the ACES tonemapping.
-  color = acesTonemap(color);
-  // color = reinhardTonemap(color);
+  // Apply the tonemapping.
+  if (uniforms.tonemapping == TONEMAP_ACES) {
+    color = acesTonemap(color);
+  } else if (uniforms.tonemapping == TONEMAP_REINHARD) {
+    color = reinhardTonemap(color);
+  }
 
   // Debug the UVs
   // color = vec3f(input.uv, 0.0);

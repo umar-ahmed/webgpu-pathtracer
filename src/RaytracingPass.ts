@@ -123,26 +123,12 @@ export class RaytracingPass {
     this.bindGroup = this.createBindGroup();
   }
 
-  public update({ time }: { time: number }) {
-    if (this.renderer.isSampling()) {
-      this.renderer.frame++;
-    }
+  public reset() {
+    this.renderer.frame = 0;
+  }
 
-    this.uniforms.set({
-      resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
-      aspect: this.renderer.canvas.width / this.renderer.canvas.height,
-      frame: this.renderer.frame,
-      maxBounces: Renderer.MAX_BOUNCES,
-      samplesPerPixel: Renderer.SAMPLES_PER_PIXEL,
-      time,
-      camera: {
-        position: [0.0, 0.4, -2.0],
-        direction: [0.0, -0.2, 1.0],
-        fov: 45.0,
-        focalDistance: 2.0,
-        aperture: 0.03,
-      },
-    });
+  public setUniforms(value: any) {
+    this.uniforms.set(value);
 
     if (this.uniformsBuffer) {
       this.renderer.device.queue.writeBuffer(
@@ -151,6 +137,19 @@ export class RaytracingPass {
         this.uniforms.arrayBuffer
       );
     }
+  }
+
+  public update({ time }: { time: number }) {
+    if (this.renderer.isSampling()) {
+      this.renderer.frame++;
+    }
+
+    this.setUniforms({
+      resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
+      aspect: this.renderer.canvas.width / this.renderer.canvas.height,
+      frame: this.renderer.frame,
+      time,
+    });
   }
 
   public render(commandEncoder: GPUCommandEncoder) {

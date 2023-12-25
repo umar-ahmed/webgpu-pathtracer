@@ -2,8 +2,6 @@ import noiseBase64 from "./assets/noise";
 
 export class Renderer {
   static MAX_SAMPLES = 256;
-  static MAX_BOUNCES: number = 8;
-  static SAMPLES_PER_PIXEL: number = 4;
 
   private _canvas: HTMLCanvasElement;
   public context: GPUCanvasContext;

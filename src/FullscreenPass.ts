@@ -132,12 +132,8 @@ export class FullscreenPass {
     this.bindGroup = this.createBindGroup();
   }
 
-  public update({ time }: { time: number }) {
-    this.uniforms.set({
-      resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
-      aspect: this.renderer.canvas.width / this.renderer.canvas.height,
-      time,
-    });
+  public setUniforms(value: any) {
+    this.uniforms.set(value);
 
     if (this.uniformsBuffer) {
       this.renderer.device.queue.writeBuffer(
@@ -146,6 +142,14 @@ export class FullscreenPass {
         this.uniforms.arrayBuffer
       );
     }
+  }
+
+  public update({ time }: { time: number }) {
+    this.setUniforms({
+      resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
+      aspect: this.renderer.canvas.width / this.renderer.canvas.height,
+      time,
+    });
   }
 
   public render(commandEncoder: GPUCommandEncoder) {

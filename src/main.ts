@@ -1,6 +1,50 @@
+import { Pane } from "tweakpane";
+
 import { FullscreenPass } from "./FullscreenPass";
 import { RaytracingPass } from "./RaytracingPass";
 import { Renderer } from "./Renderer";
+
+const PARAMS = {
+  maxBounces: 6,
+  samplesPerPixel: 4,
+  denoise: true,
+  tonemapping: 1,
+  camera: {
+    position: {
+      x: 0.0,
+      y: 0.4,
+      z: -2.0,
+    },
+    direction: {
+      x: 0.0,
+      y: -0.2,
+      z: 1.0,
+    },
+    fov: 45,
+    focalDistance: 2.0,
+    aperture: 0.03,
+  },
+};
+
+const pane = new Pane({ title: "Parameters" });
+
+pane.addBinding(PARAMS, "maxBounces", { min: 0, max: 10, step: 1 });
+pane.addBinding(PARAMS, "samplesPerPixel", { min: 1, max: 16, step: 1 });
+const cameraFolder = pane.addFolder({ title: "Camera" });
+cameraFolder.addBinding(PARAMS.camera, "position");
+cameraFolder.addBinding(PARAMS.camera, "direction");
+cameraFolder.addBinding(PARAMS.camera, "fov", { min: 1, max: 120 });
+cameraFolder.addBinding(PARAMS.camera, "focalDistance", { min: 0.1, max: 10 });
+cameraFolder.addBinding(PARAMS.camera, "aperture", { min: 0.0, max: 0.5 });
+const postprocessingFolder = pane.addFolder({ title: "Post-processing" });
+postprocessingFolder.addBinding(PARAMS, "denoise");
+postprocessingFolder.addBinding(PARAMS, "tonemapping", {
+  options: {
+    none: 0,
+    aces: 1,
+    reinhard: 2,
+  },
+});
 
 async function main() {
   const supported = await Renderer.supported();
@@ -16,6 +60,23 @@ async function main() {
 
   const raytracingPass = new RaytracingPass(renderer);
   const fullscreenPass = new FullscreenPass(renderer);
+
+  const update = () => {
+    const uniforms = {
+      ...PARAMS,
+      denoise: PARAMS.denoise ? 1 : 0,
+      camera: {
+        ...PARAMS.camera,
+        position: Object.values(PARAMS.camera.position),
+        direction: Object.values(PARAMS.camera.direction),
+      },
+    };
+    raytracingPass.setUniforms(uniforms);
+    fullscreenPass.setUniforms(uniforms);
+    raytracingPass.reset();
+  };
+  update();
+  pane.on("change", update);
 
   const startTime = performance.now();
 
