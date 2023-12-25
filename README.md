@@ -1,3 +1,4 @@
+<br>
 
 <h1 align="center">WebGPU Pathtracer</h1>
 <h3 align="center">✨ A simple pathtracer running in the browser using WebGPU. ✨</h3>
