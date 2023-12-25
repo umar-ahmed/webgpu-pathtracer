@@ -164,6 +164,26 @@ async function main() {
       shouldUpdate = true;
     }
 
+    if (keyboardState.get("-")) {
+      cam.fov = clamp(cam.fov - 1, 1, 120);
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("=")) {
+      cam.fov = clamp(cam.fov + 1, 1, 120);
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("[")) {
+      cam.aperture = clamp(cam.aperture - 0.01, 0, 0.5);
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("]")) {
+      cam.aperture = clamp(cam.aperture + 0.01, 0, 0.5);
+      shouldUpdate = true;
+    }
+
     if (keyboardState.get("q")) {
       cam.focalDistance -= 0.1;
       shouldUpdate = true;
