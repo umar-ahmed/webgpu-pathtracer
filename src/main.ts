@@ -72,27 +72,29 @@ async function main() {
   const raytracingPass = new RaytracingPass(renderer);
   const fullscreenPass = new FullscreenPass(renderer);
 
-  const update = () => {
+  const update = (params = PARAMS) => {
     const uniforms = {
-      ...PARAMS,
-      color: Object.values(PARAMS.color),
-      denoise: PARAMS.denoise ? 1 : 0,
+      ...params,
+      color: Object.values(params.color),
+      denoise: params.denoise ? 1 : 0,
       camera: {
-        ...PARAMS.camera,
-        position: Object.values(PARAMS.camera.position),
-        direction: Object.values(PARAMS.camera.direction),
+        ...params.camera,
+        position: Object.values(params.camera.position),
+        direction: Object.values(params.camera.direction),
       },
     };
     raytracingPass.setUniforms(uniforms);
     fullscreenPass.setUniforms(uniforms);
-    raytracingPass.reset();
   };
 
   // Initial uniforms
   update();
 
   // Update uniforms when parameters change
-  pane.on("change", update);
+  pane.on("change", () => {
+    update();
+    raytracingPass.reset();
+  });
 
   const keyboardState = new Map<string, boolean>();
   document.addEventListener("keydown", (event) => {
@@ -173,7 +175,14 @@ async function main() {
     }
 
     if (shouldUpdate) {
-      update();
+      // Temporarily reduce settings to improve performance
+      update({
+        ...PARAMS,
+        samplesPerPixel: 1,
+        maxBounces: 3,
+        denoise: false,
+      });
+      raytracingPass.reset();
     }
 
     // Render
