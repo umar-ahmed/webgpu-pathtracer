@@ -224,7 +224,8 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
     // Depth of field + Anti-aliasing
     let jitter = vec3f(randPointInCircle(&seed) * (1.0 / uniforms.resolution), 0.0);
-    let jitter2 = vec3f(randPointInCircle(&seed) * uniforms.camera.aperture, 0.0);
+    let fovAdjustedAperture = uniforms.camera.aperture / tan(radians(uniforms.camera.fov) * 0.5);
+    let jitter2 = vec3f(randPointInCircle(&seed) * fovAdjustedAperture, 0.0);
     let focalPoint = ray.origin + ray.direction * uniforms.camera.focalDistance + jitter;
     ray.origin += jitter2;
     ray.direction = normalize(focalPoint - ray.origin);
