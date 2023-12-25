@@ -92,8 +92,12 @@ fn raySceneIntersect(ray: Ray, scene: array<Sphere, 6>) -> Hit {
   return closestHit;
 }
 
+fn degToRad(degrees: f32) -> f32 {
+  return degrees * 3.14159265358979323846264338327950288 / 180.0;
+}
+
 fn cameraToRay(camera: Camera, uv: vec2f) -> Ray {
-  let t = tan(radians(camera.fov) / 2.0);
+  let t = tan(degToRad(camera.fov) / 2.0);
   let r = uniforms.aspect * t;
   let b = -t;
   let l = -r;
@@ -233,7 +237,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
     // Depth of field + Anti-aliasing
     let jitter = vec3f(randPointInCircle(&seed) * (1.0 / uniforms.resolution), 0.0);
-    let fovAdjustedAperture = uniforms.camera.aperture / tan(radians(uniforms.camera.fov) * 0.5);
+    let fovAdjustedAperture = uniforms.camera.aperture / tan(degToRad(uniforms.camera.fov) * 0.5);
     let jitter2 = vec3f(randPointInCircle(&seed) * fovAdjustedAperture, 0.0);
     let focalPoint = ray.origin + ray.direction * uniforms.camera.focalDistance + jitter;
     ray.origin += jitter2;
