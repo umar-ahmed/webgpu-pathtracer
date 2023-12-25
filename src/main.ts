@@ -114,9 +114,12 @@ async function main() {
 
     // Update camera
     let shouldUpdate = false;
-    const movementSpeed = 0.04;
-    const rotationSpeed = 0.01;
     const cam = PARAMS.camera;
+
+    const speedMultiplier = keyboardState.get("Shift") ? 3 : 1;
+
+    const movementSpeed = 0.02 * (cam.fov / 120) * speedMultiplier;
+    const rotationSpeed = 0.01 * (cam.fov / 120) * speedMultiplier;
 
     if (keyboardState.get("w")) {
       cam.position.x += cam.direction.x * movementSpeed;
@@ -165,12 +168,12 @@ async function main() {
     }
 
     if (keyboardState.get("-")) {
-      cam.fov = clamp(cam.fov - 1, 1, 120);
+      cam.fov = clamp(cam.fov - 0.5, 1, 120);
       shouldUpdate = true;
     }
 
     if (keyboardState.get("=")) {
-      cam.fov = clamp(cam.fov + 1, 1, 120);
+      cam.fov = clamp(cam.fov + 0.5, 1, 120);
       shouldUpdate = true;
     }
 
