@@ -175,6 +175,9 @@ async function main() {
     }
 
     if (shouldUpdate) {
+      // Update tweakpane
+      pane.refresh();
+
       // Temporarily reduce settings to improve performance
       update({
         ...PARAMS,
@@ -182,7 +185,12 @@ async function main() {
         maxBounces: 3,
         denoise: false,
       });
+
+      // Restart raytracing to prevent smearing
       raytracingPass.reset();
+    } else {
+      // Reset settings
+      update();
     }
 
     // Render
