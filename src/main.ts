@@ -5,6 +5,11 @@ import { RaytracingPass } from "./RaytracingPass";
 import { Renderer } from "./Renderer";
 
 const PARAMS = {
+  color: {
+    r: 0.2,
+    g: 1.0,
+    b: 0.4,
+  },
   maxBounces: 6,
   samplesPerPixel: 4,
   denoise: true,
@@ -28,6 +33,12 @@ const PARAMS = {
 
 const pane = new Pane({ title: "Parameters" });
 
+pane.addBinding(PARAMS, "color", {
+  min: 0,
+  max: 1,
+  step: 0.01,
+  color: { type: "float" },
+});
 pane.addBinding(PARAMS, "maxBounces", { min: 0, max: 10, step: 1 });
 pane.addBinding(PARAMS, "samplesPerPixel", { min: 1, max: 16, step: 1 });
 const cameraFolder = pane.addFolder({ title: "Camera" });
@@ -64,6 +75,7 @@ async function main() {
   const update = () => {
     const uniforms = {
       ...PARAMS,
+      color: Object.values(PARAMS.color),
       denoise: PARAMS.denoise ? 1 : 0,
       camera: {
         ...PARAMS.camera,

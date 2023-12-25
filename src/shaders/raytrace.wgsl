@@ -13,7 +13,6 @@ struct Camera {
   aperture: f32,
 };
 
-
 struct Ray {
   origin: vec3f,
   direction: vec3f,
@@ -49,6 +48,7 @@ struct Uniforms {
   maxBounces: i32,
   samplesPerPixel: i32,
   camera: Camera,
+  color: vec3f,
 };
 
 
@@ -207,7 +207,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   let scene = array<Sphere, 6>(
     // Subject
     Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
-    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, Material(vec3f(1.0, 0.2, 0.4), 0.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
+    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, Material(uniforms.color, 0.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     Sphere(vec3f(0.45, 0.0, 0.0), 0.2, Material(vec3f(1.0, 1.0, 1.0), 0.01, 1.0, vec3f(0.0, 0.0, 0.0), 0.0)),
     // Floor
     Sphere(vec3f(0.0, -30.2, 0.0), 30.0, Material(vec3f(0.5, 0.5, 0.5), 1.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0)),
