@@ -87,8 +87,20 @@ async function main() {
     fullscreenPass.setUniforms(uniforms);
     raytracingPass.reset();
   };
+
+  // Initial uniforms
   update();
+
+  // Update uniforms when parameters change
   pane.on("change", update);
+
+  const keyboardState = new Map<string, boolean>();
+  document.addEventListener("keydown", (event) => {
+    keyboardState.set(event.key, true);
+  });
+  document.addEventListener("keyup", (event) => {
+    keyboardState.set(event.key, false);
+  });
 
   const startTime = performance.now();
 
@@ -97,6 +109,72 @@ async function main() {
     const time = (timestamp - startTime) / 1000;
     raytracingPass.update({ time });
     fullscreenPass.update({ time });
+
+    // Update camera
+    let shouldUpdate = false;
+    const movementSpeed = 0.04;
+    const rotationSpeed = 0.01;
+    const cam = PARAMS.camera;
+
+    if (keyboardState.get("w")) {
+      cam.position.x += cam.direction.x * movementSpeed;
+      cam.position.y += cam.direction.y * movementSpeed;
+      cam.position.z += cam.direction.z * movementSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("s")) {
+      cam.position.x -= cam.direction.x * movementSpeed;
+      cam.position.y -= cam.direction.y * movementSpeed;
+      cam.position.z -= cam.direction.z * movementSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("a")) {
+      cam.position.x += cam.direction.z * movementSpeed;
+      cam.position.z -= cam.direction.x * movementSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("d")) {
+      cam.position.x -= cam.direction.z * movementSpeed;
+      cam.position.z += cam.direction.x * movementSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("ArrowUp")) {
+      cam.direction.y += rotationSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("ArrowDown")) {
+      cam.direction.y -= rotationSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("ArrowLeft")) {
+      cam.direction.x += rotationSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("ArrowRight")) {
+      cam.direction.x -= rotationSpeed;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("q")) {
+      cam.focalDistance -= 0.1;
+      shouldUpdate = true;
+    }
+
+    if (keyboardState.get("e")) {
+      cam.focalDistance += 0.1;
+      shouldUpdate = true;
+    }
+
+    if (shouldUpdate) {
+      update();
+    }
 
     // Render
     if (renderer.isSampling()) {
