@@ -14,6 +14,18 @@
 
 <br>
 
+## Features
+
+- [x] 💡 Indirect lighting
+- [x] 🫨 Depth of field
+- [x] 🎨 Tone-mapping
+- [x] 🌫️ Denoising
+- [x] 📸 Camera controls
+- [ ] 🪙 PBR materials
+- [ ] 🔺 Triangle meshes
+- [ ] 🗺️ Environment maps
+- [ ] 📦 Bounding volume hierarchies (BVH)
+- [ ] 🤹 Multiple importance sampling (MIS)
 
 ## Getting Started
 
