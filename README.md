@@ -2,6 +2,10 @@
 
 A simple pathtracer running in the browser using WebGPU.
 
+[Live Demo](https://webgpu-pathtracer.vercel.app/)
+
+![Screenshot](./screenshot.png)
+
 ## Getting Started
 
 ### Prerequisites
