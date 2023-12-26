@@ -6,9 +6,9 @@ import { Renderer } from "./Renderer";
 
 const PARAMS = {
   color: {
-    r: 0.2,
+    r: 1.0,
     g: 1.0,
-    b: 0.4,
+    b: 1.0,
   },
   maxBounces: 6,
   samplesPerPixel: 4,
@@ -17,7 +17,7 @@ const PARAMS = {
   camera: {
     position: {
       x: 0.0,
-      y: 0.4,
+      y: 0.6,
       z: -2.0,
     },
     direction: {
