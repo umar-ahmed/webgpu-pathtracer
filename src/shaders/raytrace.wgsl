@@ -4,6 +4,7 @@ const TWOPI = 6.28318530718;
 const INVPI = 0.31830988618;
 const INVTWOPI = 0.15915494309;
 const INF = 1e20;
+const EPSILON = 1e-6;
 
 struct Camera {
   position: vec3f,
@@ -31,6 +32,23 @@ struct Sphere {
   center: vec3f,
   radius: f32,
   material: Material,
+};
+
+struct Triangle {
+  a: vec3f,
+  b: vec3f,
+  c: vec3f,
+  aNormal: vec3f,
+  bNormal: vec3f,
+  cNormal: vec3f,
+  material: Material,
+};
+
+struct Scene {
+  numTriangles: i32,
+  numSpheres: i32,
+  triangles: array<Triangle, 1>,
+  spheres: array<Sphere, 6>,
 };
 
 struct Hit {
@@ -76,13 +94,62 @@ fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
   return hit;
 }
 
-fn raySceneIntersect(ray: Ray, scene: array<Sphere, 6>) -> Hit {
+// Moller-Trumbore algorithm
+fn rayTriangleIntersect(ray: Ray, triangle: Triangle) -> Hit {
+  var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, triangle.material);
+
+  let edge1 = triangle.b - triangle.a;
+  let edge2 = triangle.c - triangle.a;
+  let h = cross(ray.direction, edge2);
+  let a = dot(edge1, h);
+
+  if (a > -EPSILON && a < EPSILON) {
+    return hit;
+  }
+
+  let f = 1.0 / a;
+  let s = ray.origin - triangle.a;
+  let u = f * dot(s, h);
+
+  if (u < 0.0 || u > 1.0) {
+    return hit;
+  }
+
+  let q = cross(s, edge1);
+  let v = f * dot(ray.direction, q);
+
+  if (v < 0.0 || u + v > 1.0) {
+    return hit;
+  }
+
+  let t = f * dot(edge2, q);
+
+  if (t > EPSILON) {
+    hit.hit = true;
+    hit.t = t;
+    hit.position = ray.origin + t * ray.direction;
+    hit.normal = normalize(cross(edge1, edge2));
+  }
+
+  return hit;
+}
+  
+
+fn raySceneIntersect(ray: Ray, scene: Scene) -> Hit {
   var closestHit: Hit;
   closestHit.hit = false;
   closestHit.t = INF;
 
-  for (var i = 0; i < 6; i++) {
-    let sphere = scene[i];
+  for (var i = 0; i < scene.numTriangles; i++) {
+    let triangle = scene.triangles[i];
+    let hit = rayTriangleIntersect(ray, triangle);
+    if (hit.hit && hit.t < closestHit.t) {
+      closestHit = hit;
+    }
+  }
+
+  for (var i = 0; i < scene.numSpheres; i++) {
+    let sphere = scene.spheres[i];
     let hit = raySphereIntersect(ray, sphere);
     if (hit.hit && hit.t < closestHit.t) {
       closestHit = hit;
@@ -161,7 +228,7 @@ fn randPointInCircle(seed: ptr<function, u32>) -> vec2f {
   return vec2f(rho * cos(theta), rho * sin(theta));
 }
 
-fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 6>, maxBounces: i32) -> vec3f {
+fn trace(seed: ptr<function, u32>, ray: Ray, scene: Scene, maxBounces: i32) -> vec3f {
   var traceRay = ray;
   var incomingLight = vec3f(0.0);
   var rayColor = vec3f(1.0);
@@ -184,6 +251,8 @@ fn trace(seed: ptr<function, u32>, ray: Ray, scene: array<Sphere, 6>, maxBounces
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(hit.material.color, hit.material.specularColor, isSpecularBounce);
     } else {
+      // Sky color
+      incomingLight += vec3f(0.5, 0.5, 0.5);
       break;
     }
   }
@@ -217,16 +286,31 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   let metal = Material(uniforms.color, vec3f(1.0, 1.0, 1.0), 0.0, 0.99, vec3f(0.0, 0.0, 0.0), 0.0);
   let roughDiffuse = Material(uniforms.color, vec3f(1.0, 1.0, 1.0), 1.0, 0.02, vec3f(0.0, 0.0, 0.0), 0.0);
   let smoothDiffuse = Material(uniforms.color, vec3f(1.0, 1.0, 1.0), 0.0, 0.03, vec3f(0.0, 0.0, 0.0), 0.0);
-  let scene = array<Sphere, 6>(
-    // Subject
-    Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, smoothDiffuse),
-    Sphere(vec3f(0.0, 0.2, 0.8), 0.4, roughDiffuse),
-    Sphere(vec3f(0.45, 0.0, 0.0), 0.2, metal),
-    // Floor
-    Sphere(vec3f(0.0, -30.2, 0.0), 30.0, floor),
-    Sphere(vec3f(-30.2, 0.0, 8.0), 30.0, floor),
-    // Light
-    Sphere(vec3f(8.0, 3.5, 4.0), 6.0, light)
+  let red = Material(vec3f(1.0, 0.0, 0.0), vec3f(1.0, 1.0, 1.0), 0.0, 0.0, vec3f(0.0, 0.0, 0.0), 0.0);
+  let scene = Scene(1, 6, array<Triangle, 1>(
+    Triangle(
+      // Position
+      vec3f(0.0, 0.2, 0.4), 
+      vec3f(-0.2, -0.2, 0.2), 
+      vec3f(0.2, -0.2, 0.3), 
+      // Normal
+      vec3f(0.0, 0.0, 1.0), 
+      vec3f(0.0, 0.0, 1.0), 
+      vec3f(0.0, 0.0, 1.0), 
+      // Material
+      red
+    )),
+    array<Sphere, 6>(
+      // Subject
+      Sphere(vec3f(-0.45, 0.0, 0.0), 0.2, smoothDiffuse),
+      Sphere(vec3f(0.0, 0.2, 0.8), 0.4, roughDiffuse),
+      Sphere(vec3f(0.45, 0.0, 0.0), 0.2, metal),
+      // Floor
+      Sphere(vec3f(0.0, -30.2, 0.0), 30.0, floor),
+      Sphere(vec3f(-30.2, 0.0, 8.0), 30.0, floor),
+      // Light
+      Sphere(vec3f(8.0, 3.5, 4.0), 6.0, light)
+    )
   );
 
   // Trace rays
