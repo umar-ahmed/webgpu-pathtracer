@@ -31,7 +31,7 @@ struct Material {
 struct Sphere {
   center: vec3f,
   radius: f32,
-  material: Material,
+  materialIndex: i32,
 };
 
 struct Triangle {
@@ -41,14 +41,16 @@ struct Triangle {
   aNormal: vec3f,
   bNormal: vec3f,
   cNormal: vec3f,
-  material: Material,
+  materialIndex: i32,
 };
 
 struct Scene {
   numTriangles: i32,
   numSpheres: i32,
+  numMaterials: i32,
   triangles: array<Triangle, 12>,
   spheres: array<Sphere, 4>,
+  materials: array<Material, 7>,
 };
 
 struct Hit {
@@ -56,7 +58,7 @@ struct Hit {
   position: vec3f,
   normal: vec3f,
   t: f32,
-  material: Material,
+  materialIndex: i32,
 };
 
 struct Uniforms {
@@ -72,7 +74,7 @@ struct Uniforms {
 
 
 fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
-  var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, sphere.material);
+  var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, sphere.materialIndex);
 
   let oc = ray.origin - sphere.center;
   let a = dot(ray.direction, ray.direction);
@@ -96,7 +98,7 @@ fn raySphereIntersect(ray: Ray, sphere: Sphere) -> Hit {
 
 // Moller-Trumbore algorithm
 fn rayTriangleIntersect(ray: Ray, triangle: Triangle) -> Hit {
-  var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, triangle.material);
+  var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, triangle.materialIndex);
 
   let edge1 = triangle.b - triangle.a;
   let edge2 = triangle.c - triangle.a;
@@ -237,20 +239,22 @@ fn trace(seed: ptr<function, u32>, ray: Ray, scene: Scene, maxBounces: i32) -> v
   for (var i = 0; i < maxBounces; i++) {
     let hit = raySceneIntersect(traceRay, scene);
     if (hit.hit) {
+      let material = scene.materials[hit.materialIndex];
+
       let diffuseDirection = randCosineWeightedHemisphere(seed, hit.normal);
       let specularDirection = reflect(traceRay.direction, hit.normal);
       var isSpecularBounce = 0.0;
-      if (hit.material.metalness >= rand(seed)) {
+      if (material.metalness >= rand(seed)) {
         isSpecularBounce = 1.0;
       }
       
       // Calculate ray direction based on material properties
       traceRay.origin = hit.position;
-      traceRay.direction = mix(diffuseDirection, specularDirection, isSpecularBounce * (1.0 - hit.material.roughness));
+      traceRay.direction = mix(diffuseDirection, specularDirection, isSpecularBounce * (1.0 - material.roughness));
 
-      let emittedLight = hit.material.emissionColor * hit.material.emissionStrength;
+      let emittedLight = material.emissionColor * material.emissionStrength;
       incomingLight += emittedLight * rayColor;
-      rayColor *= mix(hit.material.color, hit.material.specularColor, isSpecularBounce);
+      rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
       break;
     }
@@ -305,39 +309,49 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   let pz = vec3f(0.0, 0.0, 1.0);
   let nz = vec3f(0.0, 0.0, -1.0);
 
-  let scene = Scene(12, 4, 
+  let scene = Scene(
+    12, 4, 7,
     array<Triangle, 12>(
       // Bottom
-      Triangle(a, b, c, py, py, py, floor),
-      Triangle(a, c, d, py, py, py, floor),
+      Triangle(a, b, c, py, py, py, 0),
+      Triangle(a, c, d, py, py, py, 0),
       
       // Left
-      Triangle(a, b, e, nx, nx, nx, red),
-      Triangle(b, f, e, nx, nx, nx, red),
+      Triangle(a, b, e, nx, nx, nx, 5),
+      Triangle(b, f, e, nx, nx, nx, 5),
 
       // Front
-      Triangle(b, c, f, pz, pz, pz, floor),
-      Triangle(c, g, f, pz, pz, pz, floor),
+      Triangle(b, c, f, pz, pz, pz, 0),
+      Triangle(c, g, f, pz, pz, pz, 0),
 
       // Right
-      Triangle(c, d, g, px, px, px, green),
-      Triangle(d, h, g, px, px, px, green),
+      Triangle(c, d, g, px, px, px, 6),
+      Triangle(d, h, g, px, px, px, 6),
       
       // Back
-      Triangle(d, a, h, nz, nz, nz, floor),
-      Triangle(a, e, h, nz, nz, nz, floor),
+      Triangle(d, a, h, nz, nz, nz, 0),
+      Triangle(a, e, h, nz, nz, nz, 0),
       
       // Top
-      Triangle(e, f, g, ny, ny, ny, floor),
-      Triangle(e, g, h, ny, ny, ny, floor)
+      Triangle(e, f, g, ny, ny, ny, 0),
+      Triangle(e, g, h, ny, ny, ny, 0)
     ),
     array<Sphere, 4>(
       // Subject
-      Sphere(vec3f(-0.45, 0.2, 0.0), 0.2, smoothDiffuse),
-      Sphere(vec3f(0.0, 0.4, 0.8), 0.4, roughDiffuse),
-      Sphere(vec3f(0.45, 0.2, 0.0), 0.2, metal),
+      Sphere(vec3f(-0.45, 0.2, 0.0), 0.2, 4),
+      Sphere(vec3f(0.0, 0.4, 0.8), 0.4, 3),
+      Sphere(vec3f(0.45, 0.2, 0.0), 0.2, 2),
       // Light
-      Sphere(vec3f(0.0, 4.5, 0.0), 1.5, light)
+      Sphere(vec3f(0.0, 4.5, 0.0), 1.5, 1)
+    ),
+    array<Material, 7>(
+      floor,
+      light,
+      metal,
+      roughDiffuse,
+      smoothDiffuse,
+      red,
+      green
     )
   );
 

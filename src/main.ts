@@ -10,8 +10,8 @@ const PARAMS = {
     g: 1.0,
     b: 1.0,
   },
-  maxBounces: 6,
-  samplesPerPixel: 4,
+  maxBounces: 4,
+  samplesPerPixel: 2,
   denoise: true,
   tonemapping: 1,
   camera: {
