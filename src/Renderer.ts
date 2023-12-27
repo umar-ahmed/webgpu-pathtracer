@@ -9,7 +9,7 @@ type RendererEventMap = {
 export type RendererEventType = keyof RendererEventMap;
 
 export class Renderer {
-  static MAX_SAMPLES = 256;
+  static MAX_SAMPLES = 64;
 
   private _canvas: HTMLCanvasElement;
   private listeners: Map<RendererEventType, any[]> = new Map();
@@ -21,6 +21,7 @@ export class Renderer {
   public outputTexturePrev: GPUTexture;
   public noiseTexture: GPUTexture;
   public frame: number = 1;
+  public scalingFactor: number = 1;
 
   static async supported(): Promise<boolean> {
     if ("gpu" in navigator === false) {
@@ -117,8 +118,8 @@ export class Renderer {
   private createStorageTexture() {
     return this.device.createTexture({
       size: {
-        width: this.canvas.width,
-        height: this.canvas.height,
+        width: this.width,
+        height: this.height,
         depthOrArrayLayers: 1,
       },
       format: "rgba8unorm",
@@ -143,6 +144,26 @@ export class Renderer {
     // Re-create the storage texture with the new size
     this.outputTexture = this.createStorageTexture();
     this.outputTexturePrev = this.createStorageTexture();
+  }
+
+  get width() {
+    return this.canvas.width;
+  }
+
+  get scaledWidth() {
+    return this.canvas.width * this.scalingFactor;
+  }
+
+  get height() {
+    return this.canvas.height;
+  }
+
+  get scaledHeight() {
+    return this.canvas.height * this.scalingFactor;
+  }
+
+  get aspect() {
+    return this.canvas.width / this.canvas.height;
   }
 
   get canvas(): HTMLCanvasElement {

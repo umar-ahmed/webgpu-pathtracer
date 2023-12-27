@@ -54,7 +54,7 @@ export class FullscreenPass {
       entries: [
         {
           binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
+          visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
           buffer: {
             type: "uniform",
           },
@@ -146,8 +146,9 @@ export class FullscreenPass {
 
   public update({ time }: { time: number }) {
     this.setUniforms({
-      resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
-      aspect: this.renderer.canvas.width / this.renderer.canvas.height,
+      resolution: [this.renderer.width, this.renderer.height],
+      aspect: this.renderer.aspect,
+      scalingFactor: this.renderer.scalingFactor,
       time,
     });
   }

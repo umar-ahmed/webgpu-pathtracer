@@ -14,6 +14,7 @@ struct VertexOutput {
 struct Uniforms {
   resolution: vec2<f32>,
   aspect: f32,
+  scalingFactor: f32,
   time: f32,
   denoise: u32,
   tonemapping: u32,
@@ -44,7 +45,7 @@ fn vertexMain(@builtin(vertex_index) i: u32) -> VertexOutput {
 
   var output: VertexOutput;
   output.position = vec4f(pos[i], 0, 1);
-  output.uv = uvs[i];
+  output.uv = uvs[i] * uniforms.scalingFactor;
 
   return output;
 }

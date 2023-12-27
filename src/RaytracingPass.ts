@@ -146,16 +146,16 @@ export class RaytracingPass {
     }
 
     this.setUniforms({
-      resolution: [this.renderer.canvas.width, this.renderer.canvas.height],
-      aspect: this.renderer.canvas.width / this.renderer.canvas.height,
+      resolution: [this.renderer.scaledWidth, this.renderer.scaledHeight],
+      aspect: this.renderer.aspect,
       frame: this.renderer.frame,
       time,
     });
   }
 
   public render(commandEncoder: GPUCommandEncoder) {
-    const workgroupsX = Math.ceil(this.renderer.canvas.width / 8);
-    const workgroupsY = Math.ceil(this.renderer.canvas.height / 8);
+    const workgroupsX = Math.ceil(this.renderer.scaledWidth / 8);
+    const workgroupsY = Math.ceil(this.renderer.scaledHeight / 8);
 
     const computePassEncoder = commandEncoder.beginComputePass({
       label: "Compute Pass",
@@ -170,7 +170,7 @@ export class RaytracingPass {
     commandEncoder.copyTextureToTexture(
       { texture: this.renderer.outputTexture, mipLevel: 0 },
       { texture: this.renderer.outputTexturePrev },
-      [this.renderer.canvas.width, this.renderer.canvas.height, 1]
+      [this.renderer.width, this.renderer.height, 1]
     );
   }
 }

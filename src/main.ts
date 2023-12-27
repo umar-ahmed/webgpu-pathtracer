@@ -11,6 +11,7 @@ const PARAMS = {
     g: 1.0,
     b: 1.0,
   },
+  scalingFactor: 0.25,
   maxBounces: 4,
   samplesPerPixel: 2,
   denoise: true,
@@ -40,6 +41,7 @@ pane.addBinding(PARAMS, "color", {
   step: 0.01,
   color: { type: "float" },
 });
+pane.addBinding(PARAMS, "scalingFactor", { min: 0.05, max: 1, step: 0.05 });
 pane.addBinding(PARAMS, "maxBounces", { min: 0, max: 10, step: 1 });
 pane.addBinding(PARAMS, "samplesPerPixel", { min: 1, max: 16, step: 1 });
 const cameraFolder = pane.addFolder({ title: "Camera" });
@@ -86,6 +88,7 @@ async function main() {
     };
     raytracingPass.setUniforms(uniforms);
     fullscreenPass.setUniforms(uniforms);
+    renderer.scalingFactor = params.scalingFactor;
   };
 
   // Initial uniforms
@@ -98,7 +101,7 @@ async function main() {
   });
 
   // Update progress bar
-  NProgress.configure({ showSpinner: false });
+  NProgress.configure({ showSpinner: false, trickle: false });
   renderer.on("start", () => NProgress.start());
   renderer.on("progress", (progress) => NProgress.set(progress));
   renderer.on("complete", () => NProgress.done());
