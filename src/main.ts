@@ -265,8 +265,6 @@ async function main() {
     renderer.resize(width, height);
     raytracingPass.resize();
     fullscreenPass.resize();
-
-    render(performance.now());
   });
 
   try {
@@ -274,6 +272,8 @@ async function main() {
   } catch {
     observer.observe(renderer.canvas, { box: "content-box" });
   }
+
+  render(performance.now());
 }
 
 main().catch((err) => {
