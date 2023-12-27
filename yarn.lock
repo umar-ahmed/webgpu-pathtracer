@@ -300,6 +300,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/nprogress@npm:^0":
+  version: 0.2.3
+  resolution: "@types/nprogress@npm:0.2.3"
+  checksum: cac0fe73aca79bc1472a1556f56303df72026f2fcd8dbe311fe84b1f46e454b9040c1e69223d94e3bf156a5986382170c52ebda19aa70f555f1b6855d8f744a6
+  languageName: node
+  linkType: hard
+
 "@webgpu/types@npm:^0.1.40":
   version: 0.1.40
   resolution: "@webgpu/types@npm:0.1.40"
@@ -938,6 +945,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nprogress@npm:^0.2.0":
+  version: 0.2.0
+  resolution: "nprogress@npm:0.2.0"
+  checksum: eab9a923a1ad1eed71a455ecfbc358442dd9bcd71b9fa3fa1c67eddf5159360b182c218f76fca320c97541a1b45e19ced04e6dcb044a662244c5419f8ae9e821
+  languageName: node
+  linkType: hard
+
 "p-map@npm:^4.0.0":
   version: 4.0.0
   resolution: "p-map@npm:4.0.0"
@@ -1288,7 +1302,9 @@ __metadata:
   resolution: "webgpu-pathtracer@workspace:."
   dependencies:
     "@tweakpane/core": "npm:^2.0.3"
+    "@types/nprogress": "npm:^0"
     "@webgpu/types": "npm:^0.1.40"
+    nprogress: "npm:^0.2.0"
     tweakpane: "npm:^4.0.3"
     typescript: "npm:^5.2.2"
     vite: "npm:^5.0.8"

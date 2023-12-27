@@ -1,4 +1,5 @@
 import { Pane } from "tweakpane";
+import NProgress from "nprogress";
 
 import { FullscreenPass } from "./FullscreenPass";
 import { RaytracingPass } from "./RaytracingPass";
@@ -95,6 +96,12 @@ async function main() {
     update();
     raytracingPass.reset();
   });
+
+  // Update progress bar
+  NProgress.configure({ showSpinner: false });
+  renderer.on("start", () => NProgress.start());
+  renderer.on("progress", (progress) => NProgress.set(progress));
+  renderer.on("complete", () => NProgress.done());
 
   const keyboardState = new Map<string, boolean>();
   document.addEventListener("keydown", (event) => {
@@ -226,6 +233,8 @@ async function main() {
 
       const commandBuffer = commandEncoder.finish();
       renderer.device.queue.submit([commandBuffer]);
+
+      renderer.emit("progress", renderer.progress());
     }
 
     requestAnimationFrame(render);

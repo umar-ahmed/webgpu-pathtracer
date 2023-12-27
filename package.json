@@ -11,11 +11,13 @@
   "packageManager": "yarn@4.0.2",
   "dependencies": {
     "@webgpu/types": "^0.1.40",
+    "nprogress": "^0.2.0",
     "tweakpane": "^4.0.3",
     "webgpu-utils": "^1.0.2"
   },
   "devDependencies": {
     "@tweakpane/core": "^2.0.3",
+    "@types/nprogress": "^0",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }

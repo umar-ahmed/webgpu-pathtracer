@@ -1,9 +1,19 @@
 import noiseBase64 from "./assets/noise";
 
+type RendererEventMap = {
+  start: () => void;
+  progress: (progress: number) => void;
+  complete: () => void;
+};
+
+export type RendererEventType = keyof RendererEventMap;
+
 export class Renderer {
   static MAX_SAMPLES = 256;
 
   private _canvas: HTMLCanvasElement;
+  private listeners: Map<RendererEventType, any[]> = new Map();
+
   public context: GPUCanvasContext;
   public device: GPUDevice;
   public format: GPUTextureFormat = "bgra8unorm";
@@ -141,5 +151,27 @@ export class Renderer {
 
   public isSampling() {
     return this.frame <= Renderer.MAX_SAMPLES;
+  }
+
+  public progress() {
+    return this.frame / Renderer.MAX_SAMPLES;
+  }
+
+  on(event: "start", callback: () => void): void;
+  on(event: "progress", callback: (progress: number) => void): void;
+  on(event: "complete", callback: () => void): void;
+  on(event: RendererEventType, callback: (...args: any[]) => void) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+
+    this.listeners.get(event)?.push(callback);
+  }
+
+  emit(event: "start"): void;
+  emit(event: "progress", progress: number): void;
+  emit(event: "complete"): void;
+  emit(event: RendererEventType, ...args: any[]) {
+    this.listeners.get(event)?.forEach((callback: any) => callback(...args));
   }
 }

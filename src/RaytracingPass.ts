@@ -125,6 +125,7 @@ export class RaytracingPass {
 
   public reset() {
     this.renderer.frame = 0;
+    this.renderer.emit("start");
   }
 
   public setUniforms(value: any) {
