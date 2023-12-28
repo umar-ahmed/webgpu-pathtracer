@@ -177,8 +177,8 @@ export class Renderer {
     return this.frame <= Renderer.MAX_SAMPLES;
   }
 
-  public progress() {
-    return this.frame / Renderer.MAX_SAMPLES;
+  get progress() {
+    return this.frame / (Renderer.MAX_SAMPLES + 1);
   }
 
   on(event: "start", callback: () => void): void;
