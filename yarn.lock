@@ -300,6 +300,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tweakpane/plugin-essentials@npm:^0.2.1":
+  version: 0.2.1
+  resolution: "@tweakpane/plugin-essentials@npm:0.2.1"
+  peerDependencies:
+    tweakpane: ^4.0.0
+  checksum: f79564c70ac39619f3364cd0fb31ad0e76c62a8e38b41031808b677b94a4b2622c1d9337dbc7422a03f272fa31f695e7bcc29e1995b4cd858c2b4f94930d66b0
+  languageName: node
+  linkType: hard
+
 "@types/nprogress@npm:^0":
   version: 0.2.3
   resolution: "@types/nprogress@npm:0.2.3"
@@ -1302,6 +1311,7 @@ __metadata:
   resolution: "webgpu-pathtracer@workspace:."
   dependencies:
     "@tweakpane/core": "npm:^2.0.3"
+    "@tweakpane/plugin-essentials": "npm:^0.2.1"
     "@types/nprogress": "npm:^0"
     "@webgpu/types": "npm:^0.1.40"
     nprogress: "npm:^0.2.0"

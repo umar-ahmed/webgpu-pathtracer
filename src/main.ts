@@ -1,4 +1,5 @@
 import { Pane } from "tweakpane";
+import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 import NProgress from "nprogress";
 
 import { FullscreenPass } from "./FullscreenPass";
@@ -34,17 +35,27 @@ const PARAMS = {
 };
 
 const pane = new Pane({ title: "Parameters" });
+pane.registerPlugin(EssentialsPlugin);
 
+const fpsGraph = pane.addBlade({
+  view: "fpsgraph",
+  label: "fps",
+});
 const color = pane.addBinding(PARAMS, "color", {
   min: 0,
   max: 1,
   step: 0.01,
   color: { type: "float" },
 });
+const scales = [10, 25, 50, 75, 100];
 const scalingFactor = pane.addBinding(PARAMS, "scalingFactor", {
-  min: 0.05,
-  max: 1,
-  step: 0.05,
+  view: "radiogrid",
+  groupName: "scale",
+  size: [5, 1],
+  cells: (x: number, y: number) => ({
+    title: `${scales[y * 3 + x]}%`,
+    value: scales[y * 3 + x] / 100,
+  }),
 });
 const maxBounces = pane.addBinding(PARAMS, "maxBounces", {
   min: 0,
@@ -98,6 +109,15 @@ async function main() {
   const raytracingPass = new RaytracingPass(renderer);
   const fullscreenPass = new FullscreenPass(renderer);
 
+  pane.addBinding(renderer, "progress", {
+    index: 0,
+    readonly: true,
+    view: "graph",
+    min: 0,
+    max: 1.1,
+    format: (value) => `${Math.round(value * 100)}%`,
+  });
+
   screenshotButton.on("click", () => {
     const link = document.createElement("a");
     link.download = "screenshot.png";
@@ -134,11 +154,13 @@ async function main() {
     fullscreenPass.setUniforms({ scalingFactor: value });
     raytracingPass.reset();
   });
-  maxBounces.on("change", ({ value }) => {
+  maxBounces.on("change", ({ value, last }) => {
+    if (!last) return;
     raytracingPass.setUniforms({ maxBounces: value });
     raytracingPass.reset();
   });
-  samplesPerPixel.on("change", ({ value }) => {
+  samplesPerPixel.on("change", ({ value, last }) => {
+    if (!last) return;
     raytracingPass.setUniforms({ samplesPerPixel: value });
     raytracingPass.reset();
   });
@@ -186,6 +208,8 @@ async function main() {
   const startTime = performance.now();
 
   function render(timestamp: DOMHighResTimeStamp) {
+    (fpsGraph as any).begin();
+
     // Update uniforms
     const time = (timestamp - startTime) / 1000;
     raytracingPass.update({ time });
@@ -300,7 +324,7 @@ async function main() {
 
     if (renderer.isSampling()) {
       raytracingPass.render(commandEncoder);
-      renderer.emit("progress", renderer.progress());
+      renderer.emit("progress", renderer.progress);
     }
 
     fullscreenPass.render(commandEncoder);
@@ -308,6 +332,7 @@ async function main() {
     const commandBuffer = commandEncoder.finish();
     renderer.device.queue.submit([commandBuffer]);
 
+    (fpsGraph as any).end();
     requestAnimationFrame(render);
   }
 
