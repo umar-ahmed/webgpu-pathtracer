@@ -125,7 +125,7 @@ export class Renderer {
         height: this.height,
         depthOrArrayLayers: 1,
       },
-      format: "rgba8unorm",
+      format: "rgba16float",
       usage:
         GPUTextureUsage.STORAGE_BINDING |
         GPUTextureUsage.TEXTURE_BINDING |

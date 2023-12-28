@@ -64,7 +64,7 @@ export class RaytracingPass {
           visibility: GPUShaderStage.COMPUTE,
           storageTexture: {
             access: "write-only",
-            format: "rgba8unorm",
+            format: "rgba16float",
           },
         },
         {

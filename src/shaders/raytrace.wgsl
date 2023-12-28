@@ -265,7 +265,7 @@ fn trace(seed: ptr<function, u32>, ray: Ray, scene: Scene, maxBounces: i32) -> v
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var blueNoiseTexture: texture_2d<f32>;
-@group(0) @binding(2) var outputTexture: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(2) var outputTexture: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(3) var outputTexturePrev: texture_2d<f32>;
 
 @compute @workgroup_size(8, 8)
