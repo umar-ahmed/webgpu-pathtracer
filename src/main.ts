@@ -300,7 +300,6 @@ async function main() {
 
     if (renderer.isSampling()) {
       raytracingPass.render(commandEncoder);
-      raytracingPass.copyOutputTextureToPrev(commandEncoder);
       renderer.emit("progress", renderer.progress());
     }
 
@@ -332,8 +331,6 @@ async function main() {
     );
 
     renderer.resize(width, height);
-    raytracingPass.resize();
-    fullscreenPass.resize();
   });
 
   try {

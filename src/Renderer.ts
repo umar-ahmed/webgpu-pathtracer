@@ -4,6 +4,7 @@ type RendererEventMap = {
   start: () => void;
   progress: (progress: number) => void;
   complete: () => void;
+  resize: () => void;
 };
 
 export type RendererEventType = keyof RendererEventMap;
@@ -144,6 +145,8 @@ export class Renderer {
     // Re-create the storage texture with the new size
     this.outputTexture = this.createStorageTexture();
     this.outputTexturePrev = this.createStorageTexture();
+
+    this.emit("resize");
   }
 
   get width() {
@@ -181,6 +184,7 @@ export class Renderer {
   on(event: "start", callback: () => void): void;
   on(event: "progress", callback: (progress: number) => void): void;
   on(event: "complete", callback: () => void): void;
+  on(event: "resize", callback: () => void): void;
   on(event: RendererEventType, callback: (...args: any[]) => void) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
@@ -192,6 +196,7 @@ export class Renderer {
   emit(event: "start"): void;
   emit(event: "progress", progress: number): void;
   emit(event: "complete"): void;
+  emit(event: "resize"): void;
   emit(event: RendererEventType, ...args: any[]) {
     this.listeners.get(event)?.forEach((callback: any) => callback(...args));
   }

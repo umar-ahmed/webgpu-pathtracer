@@ -21,6 +21,11 @@ export class RaytracingPass {
     this.bindGroupLayout = this.createBindGroupLayout();
     this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
+
+    this.renderer.on("resize", () => {
+      // Re-create the bind group with the new storage texture view
+      this.bindGroup = this.createBindGroup();
+    });
   }
 
   private createUniforms() {
@@ -118,11 +123,6 @@ export class RaytracingPass {
     });
   }
 
-  public resize() {
-    // Re-create the bind group with the new storage texture view
-    this.bindGroup = this.createBindGroup();
-  }
-
   public reset() {
     this.renderer.frame = 0;
     this.renderer.emit("start");
@@ -164,9 +164,7 @@ export class RaytracingPass {
     computePassEncoder.setBindGroup(0, this.bindGroup);
     computePassEncoder.dispatchWorkgroups(workgroupsX, workgroupsY, 1);
     computePassEncoder.end();
-  }
 
-  public copyOutputTextureToPrev(commandEncoder: GPUCommandEncoder) {
     commandEncoder.copyTextureToTexture(
       { texture: this.renderer.outputTexture, mipLevel: 0 },
       { texture: this.renderer.outputTexturePrev },
