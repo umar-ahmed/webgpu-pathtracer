@@ -35,24 +35,46 @@ const PARAMS = {
 
 const pane = new Pane({ title: "Parameters" });
 
-pane.addBinding(PARAMS, "color", {
+const color = pane.addBinding(PARAMS, "color", {
   min: 0,
   max: 1,
   step: 0.01,
   color: { type: "float" },
 });
-pane.addBinding(PARAMS, "scalingFactor", { min: 0.05, max: 1, step: 0.05 });
-pane.addBinding(PARAMS, "maxBounces", { min: 0, max: 10, step: 1 });
-pane.addBinding(PARAMS, "samplesPerPixel", { min: 1, max: 16, step: 1 });
+const scalingFactor = pane.addBinding(PARAMS, "scalingFactor", {
+  min: 0.05,
+  max: 1,
+  step: 0.05,
+});
+const maxBounces = pane.addBinding(PARAMS, "maxBounces", {
+  min: 0,
+  max: 10,
+  step: 1,
+});
+const samplesPerPixel = pane.addBinding(PARAMS, "samplesPerPixel", {
+  min: 1,
+  max: 16,
+  step: 1,
+});
 const cameraFolder = pane.addFolder({ title: "Camera" });
-cameraFolder.addBinding(PARAMS.camera, "position");
-cameraFolder.addBinding(PARAMS.camera, "direction");
-cameraFolder.addBinding(PARAMS.camera, "fov", { min: 1, max: 120 });
-cameraFolder.addBinding(PARAMS.camera, "focalDistance", { min: 0.1, max: 10 });
-cameraFolder.addBinding(PARAMS.camera, "aperture", { min: 0.0, max: 0.5 });
+const cameraPosition = cameraFolder.addBinding(PARAMS.camera, "position");
+const cameraDirection = cameraFolder.addBinding(PARAMS.camera, "direction");
+const cameraFOV = cameraFolder.addBinding(PARAMS.camera, "fov", {
+  min: 1,
+  max: 120,
+});
+const cameraFocalDistance = cameraFolder.addBinding(
+  PARAMS.camera,
+  "focalDistance",
+  { min: 0.1, max: 10 }
+);
+const cameraAperture = cameraFolder.addBinding(PARAMS.camera, "aperture", {
+  min: 0.0,
+  max: 0.5,
+});
 const postprocessingFolder = pane.addFolder({ title: "Post-processing" });
-postprocessingFolder.addBinding(PARAMS, "denoise");
-postprocessingFolder.addBinding(PARAMS, "tonemapping", {
+const denoise = postprocessingFolder.addBinding(PARAMS, "denoise");
+const tonemapping = postprocessingFolder.addBinding(PARAMS, "tonemapping", {
   options: {
     none: 0,
     aces: 1,
@@ -103,9 +125,48 @@ async function main() {
   update();
 
   // Update uniforms when parameters change
-  pane.on("change", () => {
-    update();
+  color.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ color: Object.values(value) });
     raytracingPass.reset();
+  });
+  scalingFactor.on("change", ({ value }) => {
+    renderer.scalingFactor = value;
+    fullscreenPass.setUniforms({ scalingFactor: value });
+    raytracingPass.reset();
+  });
+  maxBounces.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ maxBounces: value });
+    raytracingPass.reset();
+  });
+  samplesPerPixel.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ samplesPerPixel: value });
+    raytracingPass.reset();
+  });
+  cameraPosition.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ camera: { position: Object.values(value) } });
+    raytracingPass.reset();
+  });
+  cameraDirection.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ camera: { direction: Object.values(value) } });
+    raytracingPass.reset();
+  });
+  cameraFOV.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ camera: { fov: value } });
+    raytracingPass.reset();
+  });
+  cameraFocalDistance.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ camera: { focalDistance: value } });
+    raytracingPass.reset();
+  });
+  cameraAperture.on("change", ({ value }) => {
+    raytracingPass.setUniforms({ camera: { aperture: value } });
+    raytracingPass.reset();
+  });
+  denoise.on("change", ({ value }) => {
+    fullscreenPass.setUniforms({ denoise: value ? 1 : 0 });
+  });
+  tonemapping.on("change", ({ value }) => {
+    fullscreenPass.setUniforms({ tonemapping: value });
   });
 
   // Update progress bar
@@ -235,18 +296,18 @@ async function main() {
     }
 
     // Render
-    if (renderer.isSampling()) {
-      const commandEncoder = renderer.device.createCommandEncoder();
+    const commandEncoder = renderer.device.createCommandEncoder();
 
+    if (renderer.isSampling()) {
       raytracingPass.render(commandEncoder);
       raytracingPass.copyOutputTextureToPrev(commandEncoder);
-      fullscreenPass.render(commandEncoder);
-
-      const commandBuffer = commandEncoder.finish();
-      renderer.device.queue.submit([commandBuffer]);
-
       renderer.emit("progress", renderer.progress());
     }
+
+    fullscreenPass.render(commandEncoder);
+
+    const commandBuffer = commandEncoder.finish();
+    renderer.device.queue.submit([commandBuffer]);
 
     requestAnimationFrame(render);
   }
