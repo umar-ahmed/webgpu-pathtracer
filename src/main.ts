@@ -59,6 +59,7 @@ postprocessingFolder.addBinding(PARAMS, "tonemapping", {
     reinhard: 2,
   },
 });
+const screenshotButton = pane.addButton({ title: "Screenshot" });
 
 async function main() {
   const supported = await Renderer.supported();
@@ -74,6 +75,13 @@ async function main() {
 
   const raytracingPass = new RaytracingPass(renderer);
   const fullscreenPass = new FullscreenPass(renderer);
+
+  screenshotButton.on("click", () => {
+    const link = document.createElement("a");
+    link.download = "screenshot.png";
+    link.href = renderer.canvas.toDataURL("image/png");
+    link.click();
+  });
 
   const update = (params = PARAMS) => {
     const uniforms = {
