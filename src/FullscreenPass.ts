@@ -24,10 +24,13 @@ export class FullscreenPass {
     this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
 
-    this.renderer.on("resize", () => {
-      // Re-create the bind group with the new storage texture view
-      this.bindGroup = this.createBindGroup();
-    });
+    this.renderer.on("resize", this.reset.bind(this));
+    this.renderer.on("reset", this.reset.bind(this));
+  }
+
+  private reset() {
+    // Re-create the bind group with the new storage texture view
+    this.bindGroup = this.createBindGroup();
   }
 
   private createUniforms() {

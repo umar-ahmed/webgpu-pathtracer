@@ -22,10 +22,8 @@ export class RaytracingPass {
     this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
 
-    this.renderer.on("resize", () => {
-      // Re-create the bind group with the new storage texture view
-      this.bindGroup = this.createBindGroup();
-    });
+    this.renderer.on("resize", this.reset.bind(this));
+    this.renderer.on("reset", this.reset.bind(this));
   }
 
   private createUniforms() {
@@ -123,9 +121,9 @@ export class RaytracingPass {
     });
   }
 
-  public reset() {
-    this.renderer.frame = 0;
-    this.renderer.emit("start");
+  private reset() {
+    // Re-create the bind group with the new storage texture view
+    this.bindGroup = this.createBindGroup();
   }
 
   public setUniforms(value: any) {

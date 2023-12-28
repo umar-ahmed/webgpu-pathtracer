@@ -2,6 +2,8 @@ import noiseBase64 from "./assets/noise";
 
 type RendererEventMap = {
   start: () => void;
+  pause: () => void;
+  reset: () => void;
   progress: (progress: number) => void;
   complete: () => void;
   resize: () => void;
@@ -10,9 +12,8 @@ type RendererEventMap = {
 export type RendererEventType = keyof RendererEventMap;
 
 export class Renderer {
-  static MAX_SAMPLES = 64;
-
   private _canvas: HTMLCanvasElement;
+  private _frame: number = 1;
   private listeners: Map<RendererEventType, any[]> = new Map();
 
   public context: GPUCanvasContext;
@@ -21,8 +22,9 @@ export class Renderer {
   public outputTexture: GPUTexture;
   public outputTexturePrev: GPUTexture;
   public noiseTexture: GPUTexture;
-  public frame: number = 1;
   public scalingFactor: number = 1;
+  public maxSamples: number = 64;
+  public status: "idle" | "sampling" | "paused" = "idle";
 
   static async supported(): Promise<boolean> {
     if ("gpu" in navigator === false) {
@@ -140,11 +142,8 @@ export class Renderer {
     this._canvas.width = width;
     this._canvas.height = height;
 
-    this.frame = 1;
-
-    // Re-create the storage texture with the new size
-    this.outputTexture = this.createStorageTexture();
-    this.outputTexturePrev = this.createStorageTexture();
+    // Reset the renderer
+    this.reset();
 
     this.emit("resize");
   }
@@ -174,14 +173,65 @@ export class Renderer {
   }
 
   public isSampling() {
-    return this.frame <= Renderer.MAX_SAMPLES;
+    return this._frame <= this.maxSamples;
   }
 
   get progress() {
-    return this.frame / (Renderer.MAX_SAMPLES + 1);
+    return this._frame / (this.maxSamples + 1);
+  }
+
+  get frame() {
+    return this._frame;
+  }
+
+  set frame(value: number) {
+    this._frame = value;
+    if (this._frame > this.maxSamples) {
+      this.status = "idle";
+      this.emit("complete");
+    }
+  }
+
+  reset() {
+    const prevStatus = this.status;
+
+    // Set to idle so that we don't start sampling yet
+    this.status = "paused";
+
+    // Re-create the storage texture with the new size
+    this.outputTexture = this.createStorageTexture();
+    this.outputTexturePrev = this.createStorageTexture();
+
+    // Emit the reset event
+    this.emit("reset");
+
+    // Reset the frame counter and restore the previous status
+    this._frame = 1;
+    this.status = prevStatus === "idle" ? "sampling" : prevStatus;
+
+    if (this.status === "sampling") {
+      this.emit("start");
+    }
+  }
+
+  start() {
+    if (this._frame > this.maxSamples) {
+      this.status = "idle";
+    } else {
+      this.status = "sampling";
+    }
+  }
+
+  pause() {
+    if (this.status !== "paused") {
+      this.status = "paused";
+      this.emit("pause");
+    }
   }
 
   on(event: "start", callback: () => void): void;
+  on(event: "pause", callback: () => void): void;
+  on(event: "reset", callback: () => void): void;
   on(event: "progress", callback: (progress: number) => void): void;
   on(event: "complete", callback: () => void): void;
   on(event: "resize", callback: () => void): void;
@@ -194,6 +244,8 @@ export class Renderer {
   }
 
   emit(event: "start"): void;
+  emit(event: "pause"): void;
+  emit(event: "reset"): void;
   emit(event: "progress", progress: number): void;
   emit(event: "complete"): void;
   emit(event: "resize"): void;

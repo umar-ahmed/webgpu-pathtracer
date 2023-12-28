@@ -300,6 +300,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tweakpane/plugin-camerakit@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "@tweakpane/plugin-camerakit@npm:0.3.0"
+  peerDependencies:
+    tweakpane: ^4.0.0-beta.2
+  checksum: 90d719fdaf5336454bfa0507a94f44edc312174ceaa266e8905bcd6415a3212b87895720b8f04e309bd770d5c6679ffed987f871c47c419a1cb8c249cf7874dd
+  languageName: node
+  linkType: hard
+
 "@tweakpane/plugin-essentials@npm:^0.2.1":
   version: 0.2.1
   resolution: "@tweakpane/plugin-essentials@npm:0.2.1"
@@ -1311,6 +1320,7 @@ __metadata:
   resolution: "webgpu-pathtracer@workspace:."
   dependencies:
     "@tweakpane/core": "npm:^2.0.3"
+    "@tweakpane/plugin-camerakit": "npm:^0.3.0"
     "@tweakpane/plugin-essentials": "npm:^0.2.1"
     "@types/nprogress": "npm:^0"
     "@webgpu/types": "npm:^0.1.40"

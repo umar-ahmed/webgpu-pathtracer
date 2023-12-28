@@ -10,6 +10,7 @@
   },
   "packageManager": "yarn@4.0.2",
   "dependencies": {
+    "@tweakpane/plugin-camerakit": "^0.3.0",
     "@tweakpane/plugin-essentials": "^0.2.1",
     "@webgpu/types": "^0.1.40",
     "nprogress": "^0.2.0",

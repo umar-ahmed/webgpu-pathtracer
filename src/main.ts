@@ -1,5 +1,6 @@
 import { Pane } from "tweakpane";
 import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
+import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
 
 import { FullscreenPass } from "./FullscreenPass";
@@ -13,6 +14,7 @@ const PARAMS = {
     b: 1.0,
   },
   scalingFactor: 0.25,
+  maxSamples: 64,
   maxBounces: 4,
   samplesPerPixel: 2,
   denoise: true,
@@ -36,6 +38,7 @@ const PARAMS = {
 
 const pane = new Pane({ title: "Parameters" });
 pane.registerPlugin(EssentialsPlugin);
+pane.registerPlugin(CamerakitPlugin);
 
 const fpsGraph = pane.addBlade({
   view: "fpsgraph",
@@ -57,6 +60,11 @@ const scalingFactor = pane.addBinding(PARAMS, "scalingFactor", {
     value: scales[y * 3 + x] / 100,
   }),
 });
+const maxSamples = pane.addBinding(PARAMS, "maxSamples", {
+  min: 2,
+  max: 512,
+  step: 1,
+});
 const maxBounces = pane.addBinding(PARAMS, "maxBounces", {
   min: 0,
   max: 10,
@@ -71,7 +79,8 @@ const cameraFolder = pane.addFolder({ title: "Camera" });
 const cameraPosition = cameraFolder.addBinding(PARAMS.camera, "position");
 const cameraDirection = cameraFolder.addBinding(PARAMS.camera, "direction");
 const cameraFOV = cameraFolder.addBinding(PARAMS.camera, "fov", {
-  min: 1,
+  view: "cameraring",
+  min: 10,
   max: 120,
 });
 const cameraFocalDistance = cameraFolder.addBinding(
@@ -110,12 +119,39 @@ async function main() {
   const fullscreenPass = new FullscreenPass(renderer);
 
   pane.addBinding(renderer, "progress", {
-    index: 0,
+    index: 1,
     readonly: true,
-    view: "graph",
-    min: 0,
-    max: 1.1,
-    format: (value) => `${Math.round(value * 100)}%`,
+    format: (value) =>
+      `${renderer.status} - ${renderer.frame - 1}/${
+        renderer.maxSamples
+      } (${Math.round(value * 100)}%)`,
+  });
+  const controls = pane.addBlade({
+    index: 2,
+    view: "buttongrid",
+    size: [3, 1],
+    cells: (x: number) => ({
+      title: ["▶︎", "⏸", "Reset"][x],
+    }),
+    label: "",
+  }) as EssentialsPlugin.ButtonGridApi;
+  controls.cell(0, 0)!.disabled = true;
+  controls.on("click", ({ index: [x] }: { index: [number, number] }) => {
+    switch (x) {
+      case 0:
+        renderer.start();
+        controls.cell(0, 0)!.disabled = true;
+        controls.cell(1, 0)!.disabled = false;
+        break;
+      case 1:
+        renderer.pause();
+        controls.cell(0, 0)!.disabled = false;
+        controls.cell(1, 0)!.disabled = true;
+        break;
+      case 2:
+        renderer.reset();
+        break;
+    }
   });
 
   screenshotButton.on("click", () => {
@@ -147,42 +183,47 @@ async function main() {
   // Update uniforms when parameters change
   color.on("change", ({ value }) => {
     raytracingPass.setUniforms({ color: Object.values(value) });
-    raytracingPass.reset();
+    renderer.reset();
   });
   scalingFactor.on("change", ({ value }) => {
     renderer.scalingFactor = value;
     fullscreenPass.setUniforms({ scalingFactor: value });
-    raytracingPass.reset();
+    renderer.reset();
+  });
+  maxSamples.on("change", ({ value, last }) => {
+    if (!last) return;
+    renderer.maxSamples = value;
+    renderer.reset();
   });
   maxBounces.on("change", ({ value, last }) => {
     if (!last) return;
     raytracingPass.setUniforms({ maxBounces: value });
-    raytracingPass.reset();
+    renderer.reset();
   });
   samplesPerPixel.on("change", ({ value, last }) => {
     if (!last) return;
     raytracingPass.setUniforms({ samplesPerPixel: value });
-    raytracingPass.reset();
+    renderer.reset();
   });
   cameraPosition.on("change", ({ value }) => {
     raytracingPass.setUniforms({ camera: { position: Object.values(value) } });
-    raytracingPass.reset();
+    renderer.reset();
   });
   cameraDirection.on("change", ({ value }) => {
     raytracingPass.setUniforms({ camera: { direction: Object.values(value) } });
-    raytracingPass.reset();
+    renderer.reset();
   });
   cameraFOV.on("change", ({ value }) => {
     raytracingPass.setUniforms({ camera: { fov: value } });
-    raytracingPass.reset();
+    renderer.reset();
   });
   cameraFocalDistance.on("change", ({ value }) => {
     raytracingPass.setUniforms({ camera: { focalDistance: value } });
-    raytracingPass.reset();
+    renderer.reset();
   });
   cameraAperture.on("change", ({ value }) => {
     raytracingPass.setUniforms({ camera: { aperture: value } });
-    raytracingPass.reset();
+    renderer.reset();
   });
   denoise.on("change", ({ value }) => {
     fullscreenPass.setUniforms({ denoise: value ? 1 : 0 });
@@ -194,6 +235,7 @@ async function main() {
   // Update progress bar
   NProgress.configure({ showSpinner: false, trickle: false });
   renderer.on("start", () => NProgress.start());
+  renderer.on("reset", () => NProgress.set(0));
   renderer.on("progress", (progress) => NProgress.set(progress));
   renderer.on("complete", () => NProgress.done());
 
@@ -212,7 +254,9 @@ async function main() {
 
     // Update uniforms
     const time = (timestamp - startTime) / 1000;
-    raytracingPass.update({ time });
+    if (renderer.status === "sampling") {
+      raytracingPass.update({ time });
+    }
     fullscreenPass.update({ time });
 
     // Update camera
@@ -313,7 +357,7 @@ async function main() {
       });
 
       // Restart raytracing to prevent smearing
-      raytracingPass.reset();
+      renderer.reset();
     } else {
       // Reset settings
       update();
@@ -322,9 +366,11 @@ async function main() {
     // Render
     const commandEncoder = renderer.device.createCommandEncoder();
 
-    if (renderer.isSampling()) {
-      raytracingPass.render(commandEncoder);
-      renderer.emit("progress", renderer.progress);
+    if (renderer.status === "sampling") {
+      if (renderer.isSampling()) {
+        raytracingPass.render(commandEncoder);
+        renderer.emit("progress", renderer.progress);
+      }
     }
 
     fullscreenPass.render(commandEncoder);
@@ -364,6 +410,7 @@ async function main() {
     observer.observe(renderer.canvas, { box: "content-box" });
   }
 
+  renderer.start();
   render(performance.now());
 }
 
