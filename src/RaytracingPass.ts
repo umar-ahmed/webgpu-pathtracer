@@ -147,6 +147,7 @@ export class RaytracingPass {
       resolution: [this.renderer.scaledWidth, this.renderer.scaledHeight],
       aspect: this.renderer.aspect,
       frame: this.renderer.frame,
+      samplesPerFrame: this.renderer.samplesPerFrame,
       time,
     });
   }

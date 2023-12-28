@@ -67,7 +67,7 @@ struct Uniforms {
   time: f32,
   frame: u32,
   maxBounces: i32,
-  samplesPerPixel: i32,
+  samplesPerFrame: i32,
   camera: Camera,
   color: vec3f,
 };
@@ -358,7 +358,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // Trace rays
   var incomingLight = vec3f(0.0);
 
-  for (var i = 0; i < uniforms.samplesPerPixel; i++) {
+  for (var i = 0; i < uniforms.samplesPerFrame; i++) {
     var ray = cameraToRay(uniforms.camera, uv);
 
     // Depth of field + Anti-aliasing
@@ -373,7 +373,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
     incomingLight += trace(&seed, ray, scene, uniforms.maxBounces);
   }
 
-  color = incomingLight / f32(uniforms.samplesPerPixel);
+  color = incomingLight / f32(uniforms.samplesPerFrame);
 
   // Debug UVs
   // color = vec3f(uv, 0.0);

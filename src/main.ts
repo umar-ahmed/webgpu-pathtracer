@@ -14,9 +14,9 @@ const PARAMS = {
     b: 1.0,
   },
   scalingFactor: 0.25,
-  maxSamples: 64,
+  frames: 64,
+  samplesPerFrame: 1,
   maxBounces: 4,
-  samplesPerPixel: 2,
   denoise: true,
   tonemapping: 1,
   camera: {
@@ -60,19 +60,19 @@ const scalingFactor = pane.addBinding(PARAMS, "scalingFactor", {
     value: scales[y * 3 + x] / 100,
   }),
 });
-const maxSamples = pane.addBinding(PARAMS, "maxSamples", {
+const frames = pane.addBinding(PARAMS, "frames", {
   min: 2,
   max: 512,
+  step: 1,
+});
+const samplesPerFrame = pane.addBinding(PARAMS, "samplesPerFrame", {
+  min: 1,
+  max: 16,
   step: 1,
 });
 const maxBounces = pane.addBinding(PARAMS, "maxBounces", {
   min: 0,
   max: 10,
-  step: 1,
-});
-const samplesPerPixel = pane.addBinding(PARAMS, "samplesPerPixel", {
-  min: 1,
-  max: 16,
   step: 1,
 });
 const cameraFolder = pane.addFolder({ title: "Camera" });
@@ -122,9 +122,9 @@ async function main() {
     index: 1,
     readonly: true,
     format: (value) =>
-      `${renderer.status} - ${renderer.frame - 1}/${
-        renderer.maxSamples
-      } (${Math.round(value * 100)}%)`,
+      `${renderer.status} - ${
+        (renderer.frame - 1) * renderer.samplesPerFrame
+      }spp (${Math.round(value * 100)}%)`,
   });
   const controls = pane.addBlade({
     index: 2,
@@ -190,9 +190,9 @@ async function main() {
     fullscreenPass.setUniforms({ scalingFactor: value });
     renderer.reset();
   });
-  maxSamples.on("change", ({ value, last }) => {
+  frames.on("change", ({ value, last }) => {
     if (!last) return;
-    renderer.maxSamples = value;
+    renderer.frames = value;
     renderer.reset();
   });
   maxBounces.on("change", ({ value, last }) => {
@@ -200,9 +200,9 @@ async function main() {
     raytracingPass.setUniforms({ maxBounces: value });
     renderer.reset();
   });
-  samplesPerPixel.on("change", ({ value, last }) => {
+  samplesPerFrame.on("change", ({ value, last }) => {
     if (!last) return;
-    raytracingPass.setUniforms({ samplesPerPixel: value });
+    renderer.samplesPerFrame = value;
     renderer.reset();
   });
   cameraPosition.on("change", ({ value }) => {
@@ -351,7 +351,7 @@ async function main() {
       // Temporarily reduce settings to improve performance
       update({
         ...PARAMS,
-        samplesPerPixel: 1,
+        samplesPerFrame: 1,
         maxBounces: 3,
         denoise: false,
       });

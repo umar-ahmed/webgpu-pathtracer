@@ -23,7 +23,8 @@ export class Renderer {
   public outputTexturePrev: GPUTexture;
   public noiseTexture: GPUTexture;
   public scalingFactor: number = 1;
-  public maxSamples: number = 64;
+  public frames: number = 64;
+  public samplesPerFrame: number = 2;
   public status: "idle" | "sampling" | "paused" = "idle";
 
   static async supported(): Promise<boolean> {
@@ -173,11 +174,11 @@ export class Renderer {
   }
 
   public isSampling() {
-    return this._frame <= this.maxSamples;
+    return this._frame <= this.frames;
   }
 
   get progress() {
-    return this._frame / (this.maxSamples + 1);
+    return this._frame / (this.frames + 1);
   }
 
   get frame() {
@@ -186,7 +187,7 @@ export class Renderer {
 
   set frame(value: number) {
     this._frame = value;
-    if (this._frame > this.maxSamples) {
+    if (this._frame > this.frames) {
       this.status = "idle";
       this.emit("complete");
     }
@@ -215,7 +216,7 @@ export class Renderer {
   }
 
   start() {
-    if (this._frame > this.maxSamples) {
+    if (this._frame > this.frames) {
       this.status = "idle";
     } else {
       this.status = "sampling";
