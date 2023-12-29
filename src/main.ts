@@ -4,7 +4,7 @@ import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
 
 import { Renderer } from "./Renderer";
-import { clamp } from "./utils";
+import { KeyboardControls } from "./KeyboardControls";
 
 const PARAMS = {
   color: {
@@ -157,25 +157,6 @@ async function main() {
     link.click();
   });
 
-  const update = (params = PARAMS) => {
-    const uniforms = {
-      ...params,
-      color: Object.values(params.color),
-      denoise: params.denoise ? 1 : 0,
-      camera: {
-        ...params.camera,
-        position: Object.values(params.camera.position),
-        direction: Object.values(params.camera.direction),
-      },
-    };
-    renderer.setUniforms("raytracing", uniforms);
-    renderer.setUniforms("fullscreen", uniforms);
-    renderer.scalingFactor = params.scalingFactor;
-  };
-
-  // Initial uniforms
-  update();
-
   // Update uniforms when parameters change
   color.on("change", ({ value }) => {
     renderer.setUniforms("raytracing", { color: Object.values(value) });
@@ -239,13 +220,27 @@ async function main() {
   renderer.on("progress", (progress) => NProgress.set(progress));
   renderer.on("complete", () => NProgress.done());
 
-  const keyboardState = new Map<string, boolean>();
-  document.addEventListener("keydown", (event) => {
-    keyboardState.set(event.key, true);
-  });
-  document.addEventListener("keyup", (event) => {
-    keyboardState.set(event.key, false);
-  });
+  // Keyboard controls
+  const keyboardControls = new KeyboardControls(PARAMS.camera, renderer.canvas);
+
+  const update = (params = PARAMS) => {
+    const uniforms = {
+      ...params,
+      color: Object.values(params.color),
+      denoise: params.denoise ? 1 : 0,
+      camera: {
+        ...params.camera,
+        position: Object.values(params.camera.position),
+        direction: Object.values(params.camera.direction),
+      },
+    };
+    renderer.setUniforms("raytracing", uniforms);
+    renderer.setUniforms("fullscreen", uniforms);
+    renderer.scalingFactor = params.scalingFactor;
+  };
+
+  // Initial uniforms
+  update();
 
   const startTime = performance.now();
 
@@ -257,91 +252,8 @@ async function main() {
     renderer.update(time);
 
     // Update camera
-    let shouldUpdate = false;
-    const cam = PARAMS.camera;
-
-    const speedMultiplier = keyboardState.get("Shift") ? 3 : 1;
-
-    const movementSpeed = 0.02 * (cam.fov / 120) * speedMultiplier;
-    const rotationSpeed = 0.01 * (cam.fov / 120) * speedMultiplier;
-
-    if (keyboardState.get("w")) {
-      cam.position.x += cam.direction.x * movementSpeed;
-      cam.position.y += cam.direction.y * movementSpeed;
-      cam.position.z += cam.direction.z * movementSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("s")) {
-      cam.position.x -= cam.direction.x * movementSpeed;
-      cam.position.y -= cam.direction.y * movementSpeed;
-      cam.position.z -= cam.direction.z * movementSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("a")) {
-      cam.position.x += cam.direction.z * movementSpeed;
-      cam.position.z -= cam.direction.x * movementSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("d")) {
-      cam.position.x -= cam.direction.z * movementSpeed;
-      cam.position.z += cam.direction.x * movementSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("ArrowUp")) {
-      cam.direction.y += rotationSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("ArrowDown")) {
-      cam.direction.y -= rotationSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("ArrowLeft")) {
-      cam.direction.x += rotationSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("ArrowRight")) {
-      cam.direction.x -= rotationSpeed;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("-")) {
-      cam.fov = clamp(cam.fov - 0.5, 1, 120);
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("=")) {
-      cam.fov = clamp(cam.fov + 0.5, 1, 120);
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("[")) {
-      cam.aperture = clamp(cam.aperture - 0.01, 0, 0.5);
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("]")) {
-      cam.aperture = clamp(cam.aperture + 0.01, 0, 0.5);
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("q")) {
-      cam.focalDistance -= 0.1;
-      shouldUpdate = true;
-    }
-
-    if (keyboardState.get("e")) {
-      cam.focalDistance += 0.1;
-      shouldUpdate = true;
-    }
-
-    if (shouldUpdate) {
+    const didUpdate = keyboardControls.update();
+    if (didUpdate) {
       // Update tweakpane
       pane.refresh();
 
