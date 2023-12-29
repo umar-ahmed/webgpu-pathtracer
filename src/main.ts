@@ -4,6 +4,7 @@ import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
 
 import { Renderer } from "./Renderer";
+import { clamp } from "./utils";
 
 const PARAMS = {
   color: {
@@ -364,34 +365,6 @@ async function main() {
 
     (fpsGraph as any).end();
     requestAnimationFrame(render);
-  }
-
-  const clamp = (value: number, min: number, max: number) =>
-    Math.min(Math.max(value, min), max);
-
-  const observer = new ResizeObserver(([entry]) => {
-    const dpr = clamp(window.devicePixelRatio, 1, 2);
-    const maxDimension = renderer.device.limits.maxTextureDimension2D;
-    const width = clamp(
-      entry.devicePixelContentBoxSize?.[0].inlineSize ||
-        entry.contentBoxSize[0].inlineSize * dpr,
-      1,
-      maxDimension
-    );
-    const height = clamp(
-      entry.devicePixelContentBoxSize?.[0].blockSize ||
-        entry.contentBoxSize[0].blockSize * dpr,
-      1,
-      maxDimension
-    );
-
-    renderer.resize(width, height);
-  });
-
-  try {
-    observer.observe(renderer.canvas, { box: "device-pixel-content-box" });
-  } catch {
-    observer.observe(renderer.canvas, { box: "content-box" });
   }
 
   renderer.start();

@@ -1,6 +1,7 @@
 import { FullscreenPass } from "./FullscreenPass";
 import { RaytracingPass } from "./RaytracingPass";
 import noiseBase64 from "./assets/noise";
+import { clamp } from "./utils";
 
 type RendererEventMap = {
   start: () => void;
@@ -69,9 +70,39 @@ export class Renderer {
       : "rgba8unorm";
 
     const noiseTexture = await Renderer.loadNoiseTexture(device);
+
     const renderer = new Renderer(device, format, noiseTexture);
 
+    Renderer.registerResizeObserver(renderer);
+
     return renderer;
+  }
+
+  private static registerResizeObserver(renderer: Renderer) {
+    const observer = new ResizeObserver(([entry]) => {
+      const dpr = clamp(window.devicePixelRatio, 1, 2);
+      const maxDimension = renderer.device.limits.maxTextureDimension2D;
+      const width = clamp(
+        entry.devicePixelContentBoxSize?.[0].inlineSize ||
+          entry.contentBoxSize[0].inlineSize * dpr,
+        1,
+        maxDimension
+      );
+      const height = clamp(
+        entry.devicePixelContentBoxSize?.[0].blockSize ||
+          entry.contentBoxSize[0].blockSize * dpr,
+        1,
+        maxDimension
+      );
+
+      renderer.resize(width, height);
+    });
+
+    try {
+      observer.observe(renderer.canvas, { box: "device-pixel-content-box" });
+    } catch {
+      observer.observe(renderer.canvas, { box: "content-box" });
+    }
   }
 
   private static async loadNoiseTexture(device: GPUDevice) {
