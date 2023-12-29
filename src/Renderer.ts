@@ -1,5 +1,5 @@
-import { FullscreenPass } from "./passes/FullscreenPass";
-import { RaytracingPass } from "./passes/RaytracingPass";
+import { FullscreenPass } from "./passes/fullscreen";
+import { RaytracePass } from "./passes/raytrace";
 import noiseBase64 from "./assets/noise";
 import { clamp } from "./utils";
 
@@ -18,7 +18,7 @@ export class Renderer {
   private _canvas: HTMLCanvasElement;
   private _frame: number = 1;
   private passes: {
-    raytracing: RaytracingPass;
+    raytrace: RaytracePass;
     fullscreen: FullscreenPass;
   };
   private listeners: Map<RendererEventType, any[]> = new Map();
@@ -156,7 +156,7 @@ export class Renderer {
     this.noiseTexture = noiseTexture;
 
     this.passes = {
-      raytracing: new RaytracingPass(this),
+      raytrace: new RaytracePass(this),
       fullscreen: new FullscreenPass(this),
     };
   }
@@ -241,7 +241,7 @@ export class Renderer {
 
   update(time: number) {
     if (this.status === "sampling") {
-      this.passes.raytracing.update(time);
+      this.passes.raytrace.update(time);
     }
     this.passes.fullscreen.update(time);
   }
@@ -250,7 +250,7 @@ export class Renderer {
     const commandEncoder = this.device.createCommandEncoder();
 
     if (this.status === "sampling" && this.hasFramesToSample) {
-      this.passes.raytracing.render(commandEncoder);
+      this.passes.raytrace.render(commandEncoder);
       this.emit("progress", this.progress);
     }
 

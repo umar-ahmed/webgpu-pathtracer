@@ -1,25 +1,23 @@
+import computeShaderCode from "./shaders/raytrace.wgsl?raw";
+import { Renderer } from "../renderer";
 import {
   StructuredView,
   makeShaderDataDefinitions,
   makeStructuredView,
 } from "webgpu-utils";
-import { Renderer } from "../Renderer";
-import fullscreenCode from "./shaders/fullscreen.wgsl?raw";
-import { Pass } from "./Pass";
+import { Pass } from "./pass";
 
-export class FullscreenPass extends Pass {
+export class RaytracePass extends Pass {
+  private pipeline: GPUComputePipeline;
   private uniforms: StructuredView;
   private uniformsBuffer: GPUBuffer;
   private bindGroupLayout: GPUBindGroupLayout;
   private bindGroup: GPUBindGroup;
-  private pipeline: GPURenderPipeline;
-  private sampler: GPUSampler;
 
   constructor(renderer: Renderer) {
     super(renderer);
     this.uniforms = this.createUniforms();
     this.uniformsBuffer = this.createUniformsBuffer();
-    this.sampler = this.createSampler();
     this.bindGroupLayout = this.createBindGroupLayout();
     this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
@@ -28,13 +26,8 @@ export class FullscreenPass extends Pass {
     this.renderer.on("reset", this.reset.bind(this));
   }
 
-  private reset() {
-    // Re-create the bind group with the new storage texture view
-    this.bindGroup = this.createBindGroup();
-  }
-
   private createUniforms() {
-    const defs = makeShaderDataDefinitions(fullscreenCode);
+    const defs = makeShaderDataDefinitions(computeShaderCode);
     return makeStructuredView(defs.uniforms.uniforms);
   }
 
@@ -46,40 +39,41 @@ export class FullscreenPass extends Pass {
     });
   }
 
-  private createSampler() {
-    return this.renderer.device.createSampler({
-      label: "Sampler",
-      magFilter: "linear",
-      minFilter: "linear",
-      addressModeU: "repeat",
-      addressModeV: "repeat",
-    });
-  }
-
   private createBindGroupLayout() {
     return this.renderer.device.createBindGroupLayout({
-      label: "Bind Group Layout",
+      label: "Raytracing Bind Group Layout",
       entries: [
         {
           binding: 0,
-          visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
+          visibility: GPUShaderStage.COMPUTE,
           buffer: {
             type: "uniform",
           },
         },
         {
           binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
+          visibility: GPUShaderStage.COMPUTE,
           texture: {
+            viewDimension: "2d",
             sampleType: "float",
             multisampled: false,
           },
         },
         {
           binding: 2,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: {
-            type: "filtering",
+          visibility: GPUShaderStage.COMPUTE,
+          storageTexture: {
+            access: "write-only",
+            format: "rgba16float",
+          },
+        },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.COMPUTE,
+          texture: {
+            viewDimension: "2d",
+            sampleType: "float",
+            multisampled: false,
           },
         },
       ],
@@ -88,7 +82,7 @@ export class FullscreenPass extends Pass {
 
   private createBindGroup() {
     return this.renderer.device.createBindGroup({
-      label: "Bind Group",
+      label: "Raytracing Bind Group",
       layout: this.bindGroupLayout,
       entries: [
         {
@@ -99,40 +93,37 @@ export class FullscreenPass extends Pass {
         },
         {
           binding: 1,
-          resource: this.renderer.outputTexture.createView(),
+          resource: this.renderer.noiseTexture.createView(),
         },
         {
           binding: 2,
-          resource: this.sampler,
+          resource: this.renderer.outputTexture.createView(),
+        },
+        {
+          binding: 3,
+          resource: this.renderer.outputTexturePrev.createView(),
         },
       ],
     });
   }
 
   private createPipeline() {
-    const module = this.renderer.device.createShaderModule({
-      label: "Fullscreen Shader Module",
-      code: fullscreenCode,
-    });
-
-    return this.renderer.device.createRenderPipeline({
-      label: "Fullscreen Pipeline",
+    return this.renderer.device.createComputePipeline({
       layout: this.renderer.device.createPipelineLayout({
         bindGroupLayouts: [this.bindGroupLayout],
       }),
-      primitive: {
-        topology: "triangle-list",
-      },
-      vertex: {
-        module,
-        entryPoint: "vertexMain",
-      },
-      fragment: {
-        module,
-        entryPoint: "fragmentMain",
-        targets: [{ format: this.renderer.format }],
+      compute: {
+        module: this.renderer.device.createShaderModule({
+          code: computeShaderCode,
+        }),
+        entryPoint: "computeMain",
       },
     });
+  }
+
+  private reset() {
+    // Re-create the bind group with the new storage texture view
+    this.bindGroup = this.createBindGroup();
   }
 
   public setUniforms(value: any) {
@@ -148,28 +139,35 @@ export class FullscreenPass extends Pass {
   }
 
   public update(time: number) {
+    if (this.renderer.hasFramesToSample) {
+      this.renderer.frame++;
+    }
+
     this.setUniforms({
-      resolution: [this.renderer.width, this.renderer.height],
+      resolution: [this.renderer.scaledWidth, this.renderer.scaledHeight],
       aspect: this.renderer.aspect,
-      scalingFactor: this.renderer.scalingFactor,
+      frame: this.renderer.frame,
+      samplesPerFrame: this.renderer.samplesPerFrame,
       time,
     });
   }
 
   public render(commandEncoder: GPUCommandEncoder) {
-    const renderPassEncoder = commandEncoder.beginRenderPass({
-      label: "Fullscreen Render Pass",
-      colorAttachments: [
-        {
-          view: this.renderer.context.getCurrentTexture().createView(),
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
+    const workgroupsX = Math.ceil(this.renderer.scaledWidth / 8);
+    const workgroupsY = Math.ceil(this.renderer.scaledHeight / 8);
+
+    const computePassEncoder = commandEncoder.beginComputePass({
+      label: "Compute Pass",
     });
-    renderPassEncoder.setPipeline(this.pipeline);
-    renderPassEncoder.setBindGroup(0, this.bindGroup);
-    renderPassEncoder.draw(6);
-    renderPassEncoder.end();
+    computePassEncoder.setPipeline(this.pipeline);
+    computePassEncoder.setBindGroup(0, this.bindGroup);
+    computePassEncoder.dispatchWorkgroups(workgroupsX, workgroupsY, 1);
+    computePassEncoder.end();
+
+    commandEncoder.copyTextureToTexture(
+      { texture: this.renderer.outputTexture, mipLevel: 0 },
+      { texture: this.renderer.outputTexturePrev },
+      [this.renderer.width, this.renderer.height, 1]
+    );
   }
 }

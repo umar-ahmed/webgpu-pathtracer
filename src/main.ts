@@ -3,8 +3,8 @@ import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
 
-import { Renderer } from "./Renderer";
-import { KeyboardControls } from "./controls/KeyboardControls";
+import { Renderer } from "./renderer";
+import { KeyboardControls } from "./controls/keyboard";
 
 const PARAMS = {
   color: {
@@ -159,7 +159,7 @@ async function main() {
 
   // Update uniforms when parameters change
   color.on("change", ({ value }) => {
-    renderer.setUniforms("raytracing", { color: Object.values(value) });
+    renderer.setUniforms("raytrace", { color: Object.values(value) });
     renderer.reset();
   });
   scalingFactor.on("change", ({ value }) => {
@@ -174,7 +174,7 @@ async function main() {
   });
   maxBounces.on("change", ({ value, last }) => {
     if (!last) return;
-    renderer.setUniforms("raytracing", { maxBounces: value });
+    renderer.setUniforms("raytrace", { maxBounces: value });
     renderer.reset();
   });
   samplesPerFrame.on("change", ({ value, last }) => {
@@ -183,27 +183,27 @@ async function main() {
     renderer.reset();
   });
   cameraPosition.on("change", ({ value }) => {
-    renderer.setUniforms("raytracing", {
+    renderer.setUniforms("raytrace", {
       camera: { position: Object.values(value) },
     });
     renderer.reset();
   });
   cameraDirection.on("change", ({ value }) => {
-    renderer.setUniforms("raytracing", {
+    renderer.setUniforms("raytrace", {
       camera: { direction: Object.values(value) },
     });
     renderer.reset();
   });
   cameraFOV.on("change", ({ value }) => {
-    renderer.setUniforms("raytracing", { camera: { fov: value } });
+    renderer.setUniforms("raytrace", { camera: { fov: value } });
     renderer.reset();
   });
   cameraFocalDistance.on("change", ({ value }) => {
-    renderer.setUniforms("raytracing", { camera: { focalDistance: value } });
+    renderer.setUniforms("raytrace", { camera: { focalDistance: value } });
     renderer.reset();
   });
   cameraAperture.on("change", ({ value }) => {
-    renderer.setUniforms("raytracing", { camera: { aperture: value } });
+    renderer.setUniforms("raytrace", { camera: { aperture: value } });
     renderer.reset();
   });
   denoise.on("change", ({ value }) => {
@@ -234,7 +234,7 @@ async function main() {
         direction: Object.values(params.camera.direction),
       },
     };
-    renderer.setUniforms("raytracing", uniforms);
+    renderer.setUniforms("raytrace", uniforms);
     renderer.setUniforms("fullscreen", uniforms);
     renderer.scalingFactor = params.scalingFactor;
   };
@@ -267,7 +267,7 @@ async function main() {
         denoise: false,
       });
 
-      // Restart raytracing to prevent smearing
+      // Restart raytrace to prevent smearing
       renderer.reset();
     } else {
       // Reset settings
