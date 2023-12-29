@@ -5,17 +5,17 @@ import {
   makeShaderDataDefinitions,
   makeStructuredView,
 } from "webgpu-utils";
+import { Pass } from "./Pass";
 
-export class RaytracingPass {
-  private renderer: Renderer;
-  public pipeline: GPUComputePipeline;
+export class RaytracingPass extends Pass {
+  private pipeline: GPUComputePipeline;
   private uniforms: StructuredView;
   private uniformsBuffer: GPUBuffer;
   private bindGroupLayout: GPUBindGroupLayout;
-  public bindGroup: GPUBindGroup;
+  private bindGroup: GPUBindGroup;
 
   constructor(renderer: Renderer) {
-    this.renderer = renderer;
+    super(renderer);
     this.uniforms = this.createUniforms();
     this.uniformsBuffer = this.createUniformsBuffer();
     this.bindGroupLayout = this.createBindGroupLayout();
@@ -138,8 +138,8 @@ export class RaytracingPass {
     }
   }
 
-  public update({ time }: { time: number }) {
-    if (this.renderer.isSampling()) {
+  public update(time: number) {
+    if (this.renderer.hasFramesToSample) {
       this.renderer.frame++;
     }
 

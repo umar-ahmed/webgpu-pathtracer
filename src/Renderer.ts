@@ -1,3 +1,5 @@
+import { FullscreenPass } from "./FullscreenPass";
+import { RaytracingPass } from "./RaytracingPass";
 import noiseBase64 from "./assets/noise";
 
 type RendererEventMap = {
@@ -14,6 +16,10 @@ export type RendererEventType = keyof RendererEventMap;
 export class Renderer {
   private _canvas: HTMLCanvasElement;
   private _frame: number = 1;
+  private passes: {
+    raytracing: RaytracingPass;
+    fullscreen: FullscreenPass;
+  };
   private listeners: Map<RendererEventType, any[]> = new Map();
 
   public context: GPUCanvasContext;
@@ -117,6 +123,11 @@ export class Renderer {
     this.outputTexture = this.createStorageTexture();
     this.outputTexturePrev = this.createStorageTexture();
     this.noiseTexture = noiseTexture;
+
+    this.passes = {
+      raytracing: new RaytracingPass(this),
+      fullscreen: new FullscreenPass(this),
+    };
   }
 
   private createStorageTexture() {
@@ -173,7 +184,7 @@ export class Renderer {
     return this._canvas;
   }
 
-  public isSampling() {
+  get hasFramesToSample() {
     return this._frame <= this.frames;
   }
 
@@ -191,6 +202,31 @@ export class Renderer {
       this.status = "idle";
       this.emit("complete");
     }
+  }
+
+  setUniforms(pass: keyof typeof this.passes, value: any) {
+    this.passes[pass].setUniforms(value);
+  }
+
+  update(time: number) {
+    if (this.status === "sampling") {
+      this.passes.raytracing.update(time);
+    }
+    this.passes.fullscreen.update(time);
+  }
+
+  render() {
+    const commandEncoder = this.device.createCommandEncoder();
+
+    if (this.status === "sampling" && this.hasFramesToSample) {
+      this.passes.raytracing.render(commandEncoder);
+      this.emit("progress", this.progress);
+    }
+
+    this.passes.fullscreen.render(commandEncoder);
+
+    const commandBuffer = commandEncoder.finish();
+    this.device.queue.submit([commandBuffer]);
   }
 
   reset() {

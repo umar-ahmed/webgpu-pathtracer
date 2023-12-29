@@ -3,8 +3,6 @@ import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
 
-import { FullscreenPass } from "./FullscreenPass";
-import { RaytracingPass } from "./RaytracingPass";
 import { Renderer } from "./Renderer";
 
 const PARAMS = {
@@ -115,9 +113,6 @@ async function main() {
 
   document.body.appendChild(renderer.canvas);
 
-  const raytracingPass = new RaytracingPass(renderer);
-  const fullscreenPass = new FullscreenPass(renderer);
-
   pane.addBinding(renderer, "progress", {
     index: 1,
     readonly: true,
@@ -172,8 +167,8 @@ async function main() {
         direction: Object.values(params.camera.direction),
       },
     };
-    raytracingPass.setUniforms(uniforms);
-    fullscreenPass.setUniforms(uniforms);
+    renderer.setUniforms("raytracing", uniforms);
+    renderer.setUniforms("fullscreen", uniforms);
     renderer.scalingFactor = params.scalingFactor;
   };
 
@@ -182,12 +177,12 @@ async function main() {
 
   // Update uniforms when parameters change
   color.on("change", ({ value }) => {
-    raytracingPass.setUniforms({ color: Object.values(value) });
+    renderer.setUniforms("raytracing", { color: Object.values(value) });
     renderer.reset();
   });
   scalingFactor.on("change", ({ value }) => {
     renderer.scalingFactor = value;
-    fullscreenPass.setUniforms({ scalingFactor: value });
+    renderer.setUniforms("fullscreen", { scalingFactor: value });
     renderer.reset();
   });
   frames.on("change", ({ value, last }) => {
@@ -197,7 +192,7 @@ async function main() {
   });
   maxBounces.on("change", ({ value, last }) => {
     if (!last) return;
-    raytracingPass.setUniforms({ maxBounces: value });
+    renderer.setUniforms("raytracing", { maxBounces: value });
     renderer.reset();
   });
   samplesPerFrame.on("change", ({ value, last }) => {
@@ -206,30 +201,34 @@ async function main() {
     renderer.reset();
   });
   cameraPosition.on("change", ({ value }) => {
-    raytracingPass.setUniforms({ camera: { position: Object.values(value) } });
+    renderer.setUniforms("raytracing", {
+      camera: { position: Object.values(value) },
+    });
     renderer.reset();
   });
   cameraDirection.on("change", ({ value }) => {
-    raytracingPass.setUniforms({ camera: { direction: Object.values(value) } });
+    renderer.setUniforms("raytracing", {
+      camera: { direction: Object.values(value) },
+    });
     renderer.reset();
   });
   cameraFOV.on("change", ({ value }) => {
-    raytracingPass.setUniforms({ camera: { fov: value } });
+    renderer.setUniforms("raytracing", { camera: { fov: value } });
     renderer.reset();
   });
   cameraFocalDistance.on("change", ({ value }) => {
-    raytracingPass.setUniforms({ camera: { focalDistance: value } });
+    renderer.setUniforms("raytracing", { camera: { focalDistance: value } });
     renderer.reset();
   });
   cameraAperture.on("change", ({ value }) => {
-    raytracingPass.setUniforms({ camera: { aperture: value } });
+    renderer.setUniforms("raytracing", { camera: { aperture: value } });
     renderer.reset();
   });
   denoise.on("change", ({ value }) => {
-    fullscreenPass.setUniforms({ denoise: value ? 1 : 0 });
+    renderer.setUniforms("fullscreen", { denoise: value ? 1 : 0 });
   });
   tonemapping.on("change", ({ value }) => {
-    fullscreenPass.setUniforms({ tonemapping: value });
+    renderer.setUniforms("fullscreen", { tonemapping: value });
   });
 
   // Update progress bar
@@ -254,10 +253,7 @@ async function main() {
 
     // Update uniforms
     const time = (timestamp - startTime) / 1000;
-    if (renderer.status === "sampling") {
-      raytracingPass.update({ time });
-    }
-    fullscreenPass.update({ time });
+    renderer.update(time);
 
     // Update camera
     let shouldUpdate = false;
@@ -364,19 +360,7 @@ async function main() {
     }
 
     // Render
-    const commandEncoder = renderer.device.createCommandEncoder();
-
-    if (renderer.status === "sampling") {
-      if (renderer.isSampling()) {
-        raytracingPass.render(commandEncoder);
-        renderer.emit("progress", renderer.progress);
-      }
-    }
-
-    fullscreenPass.render(commandEncoder);
-
-    const commandBuffer = commandEncoder.finish();
-    renderer.device.queue.submit([commandBuffer]);
+    renderer.render();
 
     (fpsGraph as any).end();
     requestAnimationFrame(render);

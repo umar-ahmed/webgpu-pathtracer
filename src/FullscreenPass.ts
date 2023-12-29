@@ -5,9 +5,9 @@ import {
 } from "webgpu-utils";
 import { Renderer } from "./Renderer";
 import fullscreenCode from "./shaders/fullscreen.wgsl?raw";
+import { Pass } from "./Pass";
 
-export class FullscreenPass {
-  private renderer: Renderer;
+export class FullscreenPass extends Pass {
   private uniforms: StructuredView;
   private uniformsBuffer: GPUBuffer;
   private bindGroupLayout: GPUBindGroupLayout;
@@ -16,7 +16,7 @@ export class FullscreenPass {
   private sampler: GPUSampler;
 
   constructor(renderer: Renderer) {
-    this.renderer = renderer;
+    super(renderer);
     this.uniforms = this.createUniforms();
     this.uniformsBuffer = this.createUniformsBuffer();
     this.sampler = this.createSampler();
@@ -147,7 +147,7 @@ export class FullscreenPass {
     }
   }
 
-  public update({ time }: { time: number }) {
+  public update(time: number) {
     this.setUniforms({
       resolution: [this.renderer.width, this.renderer.height],
       aspect: this.renderer.aspect,
