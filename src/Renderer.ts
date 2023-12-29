@@ -1,5 +1,5 @@
-import { FullscreenPass } from "./FullscreenPass";
-import { RaytracingPass } from "./RaytracingPass";
+import { FullscreenPass } from "./passes/FullscreenPass";
+import { RaytracingPass } from "./passes/RaytracingPass";
 import noiseBase64 from "./assets/noise";
 import { clamp } from "./utils";
 

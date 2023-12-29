@@ -1,4 +1,4 @@
-import { clamp } from "./utils";
+import { clamp } from "../utils";
 
 type Camera = {
   position: {
@@ -20,10 +20,10 @@ export class KeyboardControls {
   private object: Camera;
   private state = new Map<string, boolean>();
 
-  constructor(object: Camera, domElement: HTMLElement) {
+  constructor(object: Camera) {
     this.object = object;
-    domElement.addEventListener("keydown", this.onKeyDown.bind(this));
-    domElement.addEventListener("keyup", this.onKeyUp.bind(this));
+    document.addEventListener("keydown", this.onKeyDown.bind(this));
+    document.addEventListener("keyup", this.onKeyUp.bind(this));
   }
 
   onKeyDown(event: KeyboardEvent) {

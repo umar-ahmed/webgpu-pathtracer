@@ -4,7 +4,7 @@ import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
 
 import { Renderer } from "./Renderer";
-import { KeyboardControls } from "./KeyboardControls";
+import { KeyboardControls } from "./controls/KeyboardControls";
 
 const PARAMS = {
   color: {
@@ -221,7 +221,7 @@ async function main() {
   renderer.on("complete", () => NProgress.done());
 
   // Keyboard controls
-  const keyboardControls = new KeyboardControls(PARAMS.camera, renderer.canvas);
+  const keyboardControls = new KeyboardControls(PARAMS.camera);
 
   const update = (params = PARAMS) => {
     const uniforms = {
@@ -247,14 +247,16 @@ async function main() {
   function render(timestamp: DOMHighResTimeStamp) {
     (fpsGraph as any).begin();
 
-    // Update uniforms
+    // Get time in seconds
     const time = (timestamp - startTime) / 1000;
+
+    // Update uniforms
     renderer.update(time);
 
-    // Update camera
+    // Update keyboard controls
     const didUpdate = keyboardControls.update();
     if (didUpdate) {
-      // Update tweakpane
+      // Sync up tweakpane
       pane.refresh();
 
       // Temporarily reduce settings to improve performance
@@ -280,7 +282,8 @@ async function main() {
   }
 
   renderer.start();
-  render(performance.now());
+
+  requestAnimationFrame(render);
 }
 
 main().catch((err) => {
