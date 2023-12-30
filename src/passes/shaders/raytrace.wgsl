@@ -49,12 +49,10 @@ struct Triangle {
 struct Uniforms {
   resolution: vec2f,
   aspect: f32,
-  time: f32,
   frame: u32,
   maxBounces: i32,
   samplesPerFrame: i32,
   camera: Camera,
-  color: vec3f,
 };
 
 // Moller-Trumbore algorithm

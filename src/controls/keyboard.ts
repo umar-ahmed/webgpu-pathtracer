@@ -1,24 +1,16 @@
+import { Camera } from "../scene";
 import { clamp } from "../utils";
 
-type Camera = {
-  position: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  direction: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  fov: number;
-  focalDistance: number;
-  aperture: number;
+type KeyboardControlsEventMap = {
+  change: () => void;
 };
+
+export type KeyboardControlsEventType = keyof KeyboardControlsEventMap;
 
 export class KeyboardControls {
   private object: Camera;
   private state = new Map<string, boolean>();
+  private listeners: Map<KeyboardControlsEventType, any[]> = new Map();
 
   constructor(object: Camera) {
     this.object = object;
@@ -48,16 +40,12 @@ export class KeyboardControls {
     const rotationSpeed = 0.01 * (cam.fov / 120) * speedMultiplier;
 
     if (this.isKeyPressed("w")) {
-      cam.position.x += cam.direction.x * movementSpeed;
-      cam.position.y += cam.direction.y * movementSpeed;
-      cam.position.z += cam.direction.z * movementSpeed;
+      cam.position.add(cam.direction.clone().multiplyScalar(movementSpeed));
       didUpdate = true;
     }
 
     if (this.isKeyPressed("s")) {
-      cam.position.x -= cam.direction.x * movementSpeed;
-      cam.position.y -= cam.direction.y * movementSpeed;
-      cam.position.z -= cam.direction.z * movementSpeed;
+      cam.position.sub(cam.direction.clone().multiplyScalar(movementSpeed));
       didUpdate = true;
     }
 
@@ -123,6 +111,24 @@ export class KeyboardControls {
       didUpdate = true;
     }
 
+    if (didUpdate) {
+      this.emit("change");
+    }
+
     return didUpdate;
+  }
+
+  on(event: "change", callback: () => void): void;
+  on(event: KeyboardControlsEventType, callback: (...args: any[]) => void) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
+    }
+
+    this.listeners.get(event)?.push(callback);
+  }
+
+  emit(event: "change"): void;
+  emit(event: KeyboardControlsEventType, ...args: any[]) {
+    this.listeners.get(event)?.forEach((callback: any) => callback(...args));
   }
 }

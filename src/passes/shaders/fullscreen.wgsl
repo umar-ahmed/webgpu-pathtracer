@@ -15,7 +15,6 @@ struct Uniforms {
   resolution: vec2<f32>,
   aspect: f32,
   scalingFactor: f32,
-  time: f32,
   denoise: u32,
   tonemapping: u32,
 };

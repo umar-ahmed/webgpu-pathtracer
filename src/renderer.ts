@@ -2,6 +2,7 @@ import { FullscreenPass } from "./passes/fullscreen";
 import { RaytracePass } from "./passes/raytrace";
 import noiseBase64 from "./assets/noise";
 import { clamp } from "./utils";
+import { Camera, Scene } from "./scene";
 
 type RendererEventMap = {
   start: () => void;
@@ -239,14 +240,16 @@ export class Renderer {
     this.passes[pass].setUniforms(value);
   }
 
-  update(time: number) {
+  private update() {
     if (this.status === "sampling") {
-      this.passes.raytrace.update(time);
+      this.passes.raytrace.update();
     }
-    this.passes.fullscreen.update(time);
+    this.passes.fullscreen.update();
   }
 
-  render() {
+  render(scene: Scene, camera: Camera) {
+    this.update();
+
     const commandEncoder = this.device.createCommandEncoder();
 
     if (this.status === "sampling" && this.hasFramesToSample) {

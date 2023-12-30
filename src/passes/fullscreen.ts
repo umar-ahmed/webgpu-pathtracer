@@ -147,12 +147,11 @@ export class FullscreenPass extends Pass {
     }
   }
 
-  public update(time: number) {
+  public update() {
     this.setUniforms({
       resolution: [this.renderer.width, this.renderer.height],
       aspect: this.renderer.aspect,
       scalingFactor: this.renderer.scalingFactor,
-      time,
     });
   }
 

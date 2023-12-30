@@ -8,5 +8,5 @@ export abstract class Pass {
   }
 
   abstract render(commandEncoder: GPUCommandEncoder): void;
-  abstract update(time: number): void;
+  abstract update(): void;
 }
