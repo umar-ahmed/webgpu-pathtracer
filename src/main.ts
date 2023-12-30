@@ -34,7 +34,6 @@ pane.registerPlugin(EssentialsPlugin);
 pane.registerPlugin(CamerakitPlugin);
 
 const PARAMS = {
-  scalingFactor: 0.25,
   maxBounces: 4,
   denoise: true,
   tonemapping: 1,
@@ -47,7 +46,7 @@ const fpsGraph = pane.addBlade({
 
 const scales = [10, 25, 50, 75, 100];
 pane
-  .addBinding(PARAMS, "scalingFactor", {
+  .addBinding(renderer, "scalingFactor", {
     view: "radiogrid",
     groupName: "scale",
     size: [5, 1],
@@ -56,9 +55,7 @@ pane
       value: scales[y * 3 + x] / 100,
     }),
   })
-  .on("change", ({ value }) => {
-    renderer.scalingFactor = value;
-    renderer.setUniforms("fullscreen", { scalingFactor: value });
+  .on("change", () => {
     renderer.reset();
   });
 
@@ -182,10 +179,8 @@ keyboardControls.on("change", () => {
 renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
 renderer.setUniforms("fullscreen", {
   denoise: PARAMS.denoise ? 1 : 0,
-  scalingFactor: PARAMS.scalingFactor,
   tonemapping: PARAMS.tonemapping,
 });
-renderer.scalingFactor = PARAMS.scalingFactor;
 
 // Start rendering
 renderer.start();
