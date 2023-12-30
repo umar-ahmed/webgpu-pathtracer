@@ -129,10 +129,8 @@ export class Object3D {
     }
   }
 
-  traverse(callback: (object: Object3D) => boolean) {
-    if (callback(this)) {
-      return;
-    }
+  traverse(callback: (object: Object3D) => void) {
+    callback(this);
     for (const child of this.children) {
       child.traverse(callback);
     }
@@ -277,6 +275,13 @@ export class Color {
 
   clone() {
     return new Color(this.r, this.g, this.b);
+  }
+
+  set(r: number, g: number, b: number) {
+    this.r = r;
+    this.g = g;
+    this.b = b;
+    return this;
   }
 }
 

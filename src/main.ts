@@ -23,6 +23,8 @@ camera.position.copy(new Vector3(0, 0.6, -2));
 const scene = new Scene();
 const geometry = Geometry.createBox(1, 1, 1);
 const material = new Material();
+material.emission = 5.0;
+material.emissiveColor.set(1, 1, 1);
 const mesh = new Mesh(geometry, material);
 scene.add(mesh);
 
