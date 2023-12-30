@@ -22,17 +22,28 @@ const camera = new Camera(45, 2.0, 0.0);
 camera.position.copy(new Vector3(0, 1, -4));
 camera.rotation.x = 0.1;
 const scene = new Scene();
-const geometry = Geometry.createBox(0.2, 0.2, 0.2);
-const material = new Material();
-material.color.set(1.0, 1.0, 1.0);
-material.roughness = 1;
-material.metalness = 0.02;
-material.specularColor.set(1.0, 1.0, 1.0);
-const box = new Mesh(geometry, material);
-scene.add(box);
-const plane = new Mesh(Geometry.createPlane(1, 1), material);
+
+const white = new Material();
+white.color.set(1.0, 1.0, 1.0);
+white.roughness = 1;
+white.metalness = 0.02;
+white.specularColor.set(1.0, 1.0, 1.0);
+
+// const box = new Mesh(Geometry.createBox(0.2, 0.2, 0.2), white);
+// scene.add(box);
+
+const red = new Material();
+red.color.set(1.0, 0.05, 0.05);
+red.roughness = 1.0;
+red.metalness = 0.0;
+red.specularColor.set(1.0, 1.0, 1.0);
+
+const plane = new Mesh(Geometry.createPlane(1.6, 1), white);
 plane.rotation.x = Math.PI / 2;
 scene.add(plane);
+
+const sphere = new Mesh(Geometry.createSphere(0.5, 16, 16), red);
+scene.add(sphere);
 
 // Setup Tweakpane
 const pane = new Pane({ title: "Parameters" });
