@@ -30,7 +30,8 @@ export class Renderer {
   public outputTexture: GPUTexture;
   public outputTexturePrev: GPUTexture;
   public noiseTexture: GPUTexture;
-  public scalingFactor: number = 1;
+
+  private _scalingFactor: number = 0.5;
   public frames: number = 64;
   public samplesPerFrame: number = 2;
   public status: "idle" | "sampling" | "paused" = "idle";
@@ -192,12 +193,21 @@ export class Renderer {
     this.emit("resize");
   }
 
+  get scalingFactor() {
+    return this._scalingFactor;
+  }
+
+  set scalingFactor(value: number) {
+    this._scalingFactor = value;
+    this.setUniforms("fullscreen", { scalingFactor: value });
+  }
+
   get width() {
     return this.canvas.width;
   }
 
   get scaledWidth() {
-    return this.canvas.width * this.scalingFactor;
+    return this.canvas.width * this._scalingFactor;
   }
 
   get height() {
@@ -205,7 +215,7 @@ export class Renderer {
   }
 
   get scaledHeight() {
-    return this.canvas.height * this.scalingFactor;
+    return this.canvas.height * this._scalingFactor;
   }
 
   get aspect() {
