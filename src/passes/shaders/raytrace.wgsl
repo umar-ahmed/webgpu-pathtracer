@@ -209,7 +209,7 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
     } else {
       let sunFocus = 50.0;
       let sunIntensity = 40.0;
-      let sunLightDirection = normalize(vec3f(0.0, 0.8, -0.4));
+      let sunLightDirection = normalize(vec3f(0.4, 0.4, -0.4));
       let skyColorZenith = vec3f(0.5, 0.7, 1.0);
       let skyColorHorizon = vec3f(0.1, 0.2, 0.7);
       let groundColor = vec3f(0.2, 0.2, 0.2);

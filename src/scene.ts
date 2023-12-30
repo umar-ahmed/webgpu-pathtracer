@@ -311,13 +311,109 @@ export class Geometry {
     ];
 
     const normals = [
-      new Vector3(0, 0, 1),
-      new Vector3(0, 0, 1),
-      new Vector3(0, 0, 1),
-      new Vector3(0, 0, 1),
-      new Vector3(0, 0, 1),
-      new Vector3(0, 0, 1),
+      new Vector3(0, 0, -1),
+      new Vector3(0, 0, -1),
+      new Vector3(0, 0, -1),
+      new Vector3(0, 0, -1),
+      new Vector3(0, 0, -1),
+      new Vector3(0, 0, -1),
     ];
+
+    return new Geometry(vertices, normals);
+  }
+
+  static createSphere(
+    radius: number,
+    widthSegments: number,
+    heightSegments: number
+  ) {
+    widthSegments = Math.max(3, Math.floor(widthSegments));
+    heightSegments = Math.max(2, Math.floor(heightSegments));
+
+    const vertices: Vector3[] = [];
+    const normals: Vector3[] = [];
+
+    // Generate vertices and normals for each triangle
+    for (let y = 0; y <= heightSegments; y++) {
+      for (let x = 0; x <= widthSegments; x++) {
+        // Generate two triangles per segment
+        const u0 = x / widthSegments;
+        const v0 = y / heightSegments;
+        const u1 = x === widthSegments ? 0 : (x + 1) / widthSegments;
+        const v1 = y === heightSegments ? 0 : (y + 1) / heightSegments;
+
+        const theta0 = u0 * Math.PI * 2;
+        const phi0 = v0 * Math.PI;
+        const theta1 = u1 * Math.PI * 2;
+        const phi1 = v1 * Math.PI;
+
+        vertices.push(
+          new Vector3(
+            radius * Math.sin(phi0) * Math.cos(theta0),
+            radius * Math.cos(phi0),
+            radius * Math.sin(phi0) * Math.sin(theta0)
+          ),
+          new Vector3(
+            radius * Math.sin(phi0) * Math.cos(theta1),
+            radius * Math.cos(phi0),
+            radius * Math.sin(phi0) * Math.sin(theta1)
+          ),
+          new Vector3(
+            radius * Math.sin(phi1) * Math.cos(theta1),
+            radius * Math.cos(phi1),
+            radius * Math.sin(phi1) * Math.sin(theta1)
+          ),
+          new Vector3(
+            radius * Math.sin(phi0) * Math.cos(theta0),
+            radius * Math.cos(phi0),
+            radius * Math.sin(phi0) * Math.sin(theta0)
+          ),
+          new Vector3(
+            radius * Math.sin(phi1) * Math.cos(theta1),
+            radius * Math.cos(phi1),
+            radius * Math.sin(phi1) * Math.sin(theta1)
+          ),
+          new Vector3(
+            radius * Math.sin(phi1) * Math.cos(theta0),
+            radius * Math.cos(phi1),
+            radius * Math.sin(phi1) * Math.sin(theta0)
+          )
+        );
+
+        normals.push(
+          new Vector3(
+            Math.sin(phi0) * Math.cos(theta0),
+            Math.cos(phi0),
+            Math.sin(phi0) * Math.sin(theta0)
+          ),
+          new Vector3(
+            Math.sin(phi0) * Math.cos(theta1),
+            Math.cos(phi0),
+            Math.sin(phi0) * Math.sin(theta1)
+          ),
+          new Vector3(
+            Math.sin(phi1) * Math.cos(theta1),
+            Math.cos(phi1),
+            Math.sin(phi1) * Math.sin(theta1)
+          ),
+          new Vector3(
+            Math.sin(phi0) * Math.cos(theta0),
+            Math.cos(phi0),
+            Math.sin(phi0) * Math.sin(theta0)
+          ),
+          new Vector3(
+            Math.sin(phi1) * Math.cos(theta1),
+            Math.cos(phi1),
+            Math.sin(phi1) * Math.sin(theta1)
+          ),
+          new Vector3(
+            Math.sin(phi1) * Math.cos(theta0),
+            Math.cos(phi1),
+            Math.sin(phi1) * Math.sin(theta0)
+          )
+        );
+      }
+    }
 
     return new Geometry(vertices, normals);
   }
