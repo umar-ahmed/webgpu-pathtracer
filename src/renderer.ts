@@ -240,15 +240,13 @@ export class Renderer {
     this.passes[pass].setUniforms(value);
   }
 
-  private update() {
-    if (this.status === "sampling") {
-      this.passes.raytrace.update();
-    }
-    this.passes.fullscreen.update();
-  }
-
   render(scene: Scene, camera: Camera) {
-    this.update();
+    if (this.status === "sampling" && this.hasFramesToSample) {
+      this.frame++;
+    }
+
+    this.passes.raytrace.update();
+    this.passes.fullscreen.update();
 
     const commandEncoder = this.device.createCommandEncoder();
 

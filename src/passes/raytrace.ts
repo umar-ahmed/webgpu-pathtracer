@@ -258,10 +258,6 @@ export class RaytracePass extends Pass {
   }
 
   public update() {
-    if (this.renderer.hasFramesToSample) {
-      this.renderer.frame++;
-    }
-
     this.setUniforms({
       resolution: [this.renderer.scaledWidth, this.renderer.scaledHeight],
       aspect: this.renderer.aspect,
