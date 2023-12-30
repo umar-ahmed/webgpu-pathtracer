@@ -1,6 +1,10 @@
 export class Vector3 {
   constructor(public x: number, public y: number, public z: number) {}
 
+  toArray() {
+    return [this.x, this.y, this.z];
+  }
+
   copy(vector: Vector3) {
     this.x = vector.x;
     this.y = vector.y;
@@ -88,6 +92,32 @@ export class Vector3 {
     this.z += (vector.z - this.z) * alpha;
     return this;
   }
+
+  applyQuaternion(rotation: Quaternion) {
+    const x = this.x;
+    const y = this.y;
+    const z = this.z;
+
+    const qx = rotation.x;
+    const qy = rotation.y;
+    const qz = rotation.z;
+    const qw = rotation.w;
+
+    // calculate quat * vector
+
+    const ix = qw * x + qy * z - qz * y;
+    const iy = qw * y + qz * x - qx * z;
+    const iz = qw * z + qx * y - qy * x;
+    const iw = -qx * x - qy * y - qz * z;
+
+    // calculate result * inverse quat
+
+    this.x = ix * qw + iw * -qx + iy * -qz - iz * -qy;
+    this.y = iy * qw + iw * -qy + iz * -qx - ix * -qz;
+    this.z = iz * qw + iw * -qz + ix * -qy - iy * -qx;
+
+    return this;
+  }
 }
 
 export class Matrix4 {
@@ -140,9 +170,9 @@ export class Object3D {
 export class Scene extends Object3D {}
 
 export class Camera extends Object3D {
-  public direction = new Vector3(0, 0, -1);
+  private _direction = new Vector3(0, 0, 1);
   public up = new Vector3(0, 1, 0);
-  public right = new Vector3(1, 0, 0);
+  private _right = new Vector3(1, 0, 0);
 
   constructor(
     public fov: number,
@@ -150,6 +180,14 @@ export class Camera extends Object3D {
     public aperture: number
   ) {
     super();
+  }
+
+  get direction() {
+    return this._direction.clone().applyQuaternion(this.rotation);
+  }
+
+  get right() {
+    return this._right.clone().applyQuaternion(this.rotation);
   }
 }
 
