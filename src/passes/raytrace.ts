@@ -44,14 +44,14 @@ export class RaytracePass extends Pass {
     this.renderer.on("reset", this.reset.bind(this));
   }
 
-  createTriangleStructuredView(): StructuredView {
+  private createTriangleStructuredView(): StructuredView {
     return makeStructuredView(
       this.defs.storages.triangleBuffer,
       new ArrayBuffer(this.defs.structs.Triangle.size * 2)
     );
   }
 
-  createTriangleBuffer(): GPUBuffer {
+  private createTriangleBuffer(): GPUBuffer {
     return this.renderer.device.createBuffer({
       size: this.triangleStructuredView.arrayBuffer.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -93,7 +93,7 @@ export class RaytracePass extends Pass {
     );
   }
 
-  createMaterialBuffer(): GPUBuffer {
+  private createMaterialBuffer(): GPUBuffer {
     return this.renderer.device.createBuffer({
       size: this.materialStructuredView.arrayBuffer.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
