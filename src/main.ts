@@ -44,90 +44,15 @@ const fpsGraph = pane.addBlade({
   label: "fps",
 });
 
-const scales = [10, 25, 50, 75, 100];
-pane
-  .addBinding(renderer, "scalingFactor", {
-    view: "radiogrid",
-    groupName: "scale",
-    size: [5, 1],
-    cells: (x: number, y: number) => ({
-      title: `${scales[y * 3 + x]}%`,
-      value: scales[y * 3 + x] / 100,
-    }),
-  })
-  .on("change", () => {
-    renderer.reset();
-  });
-
-pane
-  .addBinding(renderer, "frames", { min: 2, max: 512, step: 1 })
-  .on("change", ({ last }) => {
-    if (!last) return;
-    renderer.reset();
-  });
-
-pane
-  .addBinding(renderer, "samplesPerFrame", { min: 1, max: 16, step: 1 })
-  .on("change", ({ last }) => {
-    if (!last) return;
-    renderer.reset();
-  });
-
-pane
-  .addBinding(PARAMS, "maxBounces", { min: 0, max: 10, step: 1 })
-  .on("change", ({ last }) => {
-    if (!last) return;
-    renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
-    renderer.reset();
-  });
-
-const cameraFolder = pane.addFolder({ title: "Camera" });
-
-cameraFolder.addBinding(camera, "position");
-
-cameraFolder.addBinding(camera, "direction");
-
-cameraFolder.addBinding(camera, "fov", {
-  view: "cameraring",
-  min: 10,
-  max: 120,
-});
-
-cameraFolder.addBinding(camera, "focalDistance", { min: 0.1, max: 10 });
-
-cameraFolder.addBinding(camera, "aperture", { min: 0.0, max: 0.5 });
-
-const postprocessingFolder = pane.addFolder({ title: "Post-processing" });
-
-postprocessingFolder.addBinding(PARAMS, "denoise").on("change", ({ value }) => {
-  renderer.setUniforms("fullscreen", { denoise: value ? 1 : 0 });
-});
-
-postprocessingFolder
-  .addBinding(PARAMS, "tonemapping", {
-    options: {
-      none: 0,
-      aces: 1,
-      reinhard: 2,
-    },
-  })
-  .on("change", ({ value }) => {
-    renderer.setUniforms("fullscreen", { tonemapping: value });
-  });
-
-const screenshotButton = pane.addButton({ title: "Screenshot" });
-
-// Tweakpane
 pane.addBinding(renderer, "progress", {
-  index: 1,
   readonly: true,
   format: (value) =>
     `${renderer.status} - ${
       (renderer.frame - 1) * renderer.samplesPerFrame
     }spp (${Math.round(value * 100)}%)`,
 });
+
 const controls = pane.addBlade({
-  index: 2,
   view: "buttongrid",
   size: [3, 1],
   cells: (x: number) => ({
@@ -154,7 +79,86 @@ controls.on("click", ({ index: [x] }: { index: [number, number] }) => {
   }
 });
 
-screenshotButton.on("click", () => {
+const scales = [10, 25, 50, 75, 100];
+pane
+  .addBinding(renderer, "scalingFactor", {
+    view: "radiogrid",
+    groupName: "scale",
+    size: [5, 1],
+    cells: (x: number, y: number) => ({
+      title: `${scales[y * 3 + x]}%`,
+      value: scales[y * 3 + x] / 100,
+    }),
+  })
+  .on("change", () => renderer.reset());
+
+pane
+  .addBinding(renderer, "frames", { min: 2, max: 512, step: 1 })
+  .on("change", ({ last }) => {
+    if (!last) return;
+    renderer.reset();
+  });
+
+pane
+  .addBinding(renderer, "samplesPerFrame", { min: 1, max: 16, step: 1 })
+  .on("change", ({ last }) => {
+    if (!last) return;
+    renderer.reset();
+  });
+
+pane
+  .addBinding(PARAMS, "maxBounces", { min: 0, max: 10, step: 1 })
+  .on("change", ({ last }) => {
+    if (!last) return;
+    renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
+    renderer.reset();
+  });
+
+const cameraFolder = pane.addFolder({ title: "Camera" });
+
+cameraFolder
+  .addBinding(camera, "position")
+  .on("change", () => renderer.reset());
+
+cameraFolder
+  .addBinding(camera, "direction")
+  .on("change", () => renderer.reset());
+
+cameraFolder
+  .addBinding(camera, "fov", {
+    view: "cameraring",
+    min: 10,
+    max: 120,
+  })
+  .on("change", () => renderer.reset());
+
+cameraFolder
+  .addBinding(camera, "focalDistance", { min: 0.1, max: 10 })
+  .on("change", () => renderer.reset());
+
+cameraFolder
+  .addBinding(camera, "aperture", { min: 0.0, max: 0.5 })
+  .on("change", () => renderer.reset());
+
+const postprocessingFolder = pane.addFolder({ title: "Post-processing" });
+
+postprocessingFolder.addBinding(PARAMS, "denoise").on("change", ({ value }) => {
+  renderer.setUniforms("fullscreen", { denoise: value ? 1 : 0 });
+});
+
+postprocessingFolder
+  .addBinding(PARAMS, "tonemapping", {
+    options: {
+      none: 0,
+      aces: 1,
+      reinhard: 2,
+    },
+  })
+  .on("change", ({ value }) => {
+    renderer.setUniforms("fullscreen", { tonemapping: value });
+  });
+
+pane.addButton({ title: "Screenshot" }).on("click", () => {
   const link = document.createElement("a");
   link.download = "screenshot.png";
   link.href = renderer.canvas.toDataURL("image/png");
@@ -176,15 +180,15 @@ keyboardControls.on("change", () => {
 });
 
 // Set initial uniforms based on PARAMS
-renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
+renderer.setUniforms("raytrace", {
+  maxBounces: PARAMS.maxBounces,
+});
 renderer.setUniforms("fullscreen", {
   denoise: PARAMS.denoise ? 1 : 0,
   tonemapping: PARAMS.tonemapping,
 });
 
 // Start rendering
-renderer.start();
-
 function render() {
   (fpsGraph as any).begin();
 
