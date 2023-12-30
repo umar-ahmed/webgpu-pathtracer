@@ -18,15 +18,21 @@ const renderer = await Renderer.create();
 document.body.appendChild(renderer.canvas);
 
 // Setup Scene
-const camera = new Camera(45, 2.0, 0.03);
-camera.position.copy(new Vector3(0, 0.6, -2));
+const camera = new Camera(45, 2.0, 0.0);
+camera.position.copy(new Vector3(0, 1, -4));
+camera.rotation.x = 0.1;
 const scene = new Scene();
-const geometry = Geometry.createBox(1, 1, 1);
+const geometry = Geometry.createBox(0.2, 0.2, 0.2);
 const material = new Material();
-material.emission = 5.0;
-material.emissiveColor.set(1, 1, 1);
-const mesh = new Mesh(geometry, material);
-scene.add(mesh);
+material.color.set(1.0, 1.0, 1.0);
+material.roughness = 1;
+material.metalness = 0.02;
+material.specularColor.set(1.0, 1.0, 1.0);
+const box = new Mesh(geometry, material);
+scene.add(box);
+const plane = new Mesh(Geometry.createPlane(1, 1), material);
+plane.rotation.x = Math.PI / 2;
+scene.add(plane);
 
 // Setup Tweakpane
 const pane = new Pane({ title: "Parameters" });
