@@ -50,34 +50,32 @@ export class KeyboardControls {
     }
 
     if (this.isKeyPressed("a")) {
-      cam.position.x += cam.direction.z * movementSpeed;
-      cam.position.z -= cam.direction.x * movementSpeed;
+      cam.position.add(cam.right.clone().multiplyScalar(movementSpeed));
       didUpdate = true;
     }
 
     if (this.isKeyPressed("d")) {
-      cam.position.x -= cam.direction.z * movementSpeed;
-      cam.position.z += cam.direction.x * movementSpeed;
+      cam.position.sub(cam.right.clone().multiplyScalar(movementSpeed));
       didUpdate = true;
     }
 
     if (this.isKeyPressed("ArrowUp")) {
-      cam.direction.y += rotationSpeed;
+      cam.rotation.x -= rotationSpeed;
       didUpdate = true;
     }
 
     if (this.isKeyPressed("ArrowDown")) {
-      cam.direction.y -= rotationSpeed;
+      cam.rotation.x += rotationSpeed;
       didUpdate = true;
     }
 
     if (this.isKeyPressed("ArrowLeft")) {
-      cam.direction.x += rotationSpeed;
+      cam.rotation.y += rotationSpeed;
       didUpdate = true;
     }
 
     if (this.isKeyPressed("ArrowRight")) {
-      cam.direction.x -= rotationSpeed;
+      cam.rotation.y -= rotationSpeed;
       didUpdate = true;
     }
 

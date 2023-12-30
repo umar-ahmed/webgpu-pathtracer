@@ -288,6 +288,18 @@ export class RaytracePass extends Pass {
   }
 
   updateScene(scene: Scene, camera: Camera) {
+    // Update camera uniforms
+    this.setUniforms({
+      camera: {
+        position: camera.position.toArray(),
+        direction: camera.direction.toArray(),
+        fov: camera.fov,
+        focalDistance: camera.focalDistance,
+        aperture: camera.aperture,
+      },
+    });
+
+    // TODO: Update triangle and material buffers
     const meshes: Mesh[] = [];
     scene.traverse((object) => {
       if (object instanceof Mesh) {
