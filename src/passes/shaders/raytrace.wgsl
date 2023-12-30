@@ -207,6 +207,21 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
+      let sunFocus = 50.0;
+      let sunIntensity = 40.0;
+      let sunLightDirection = normalize(vec3f(0.0, 0.8, -0.4));
+      let skyColorZenith = vec3f(0.5, 0.7, 1.0);
+      let skyColorHorizon = vec3f(0.1, 0.2, 0.7);
+      let groundColor = vec3f(0.2, 0.2, 0.2);
+
+      let skyGradientT = pow(smoothstep(0.0, 0.4, traceRay.direction.y), 0.35);
+      let skyGradient = mix(skyColorHorizon, skyColorZenith, skyGradientT);
+      let sun = pow(max(0, dot(traceRay.direction, sunLightDirection)), sunFocus) * sunIntensity;
+      let groundToSkyT = smoothstep(-0.01, 0, traceRay.direction.y);
+      let sunMask = select(0.0, 1.0, groundToSkyT >= 1.0);
+      
+      incomingLight += rayColor * (mix(groundColor, skyGradient, groundToSkyT) + sun * sunMask);
+      
       break;
     }
   }
