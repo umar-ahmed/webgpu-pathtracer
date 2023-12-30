@@ -47,7 +47,7 @@ export class RaytracePass extends Pass {
   private createTriangleStructuredView(): StructuredView {
     return makeStructuredView(
       this.defs.storages.triangleBuffer,
-      new ArrayBuffer(this.defs.structs.Triangle.size * 2)
+      new ArrayBuffer(this.defs.structs.Triangle.size * 2 * 8 * 8)
     );
   }
 
@@ -59,25 +59,38 @@ export class RaytracePass extends Pass {
   }
 
   private updateTriangleBuffer() {
-    const s = 1.0;
+    const s = 0.4;
 
-    // Triangle 1
-    this.triangleStructuredView.views[0].a.set([-s, 0, -s]);
-    this.triangleStructuredView.views[0].b.set([s, 0, s]);
-    this.triangleStructuredView.views[0].c.set([s, 0, -s]);
-    this.triangleStructuredView.views[0].aNormal.set([0, 1, 0]);
-    this.triangleStructuredView.views[0].bNormal.set([0, 1, 0]);
-    this.triangleStructuredView.views[0].cNormal.set([0, 1, 0]);
-    this.triangleStructuredView.views[0].materialIndex.set([0]);
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        const x = i * s - (8 * s) / 2;
+        const z = j * s - (8 * s) / 2;
 
-    // Triangle 2
-    this.triangleStructuredView.views[1].a.set([-s, 0, -s]);
-    this.triangleStructuredView.views[1].b.set([s, 0, s]);
-    this.triangleStructuredView.views[1].c.set([-s, 1, s]);
-    this.triangleStructuredView.views[1].aNormal.set([0, 1, 0]);
-    this.triangleStructuredView.views[1].bNormal.set([0, 1, 0]);
-    this.triangleStructuredView.views[1].cNormal.set([0, 1, 0]);
-    this.triangleStructuredView.views[1].materialIndex.set([1]);
+        const index = i * 8 + j;
+
+        // Triangle 1
+        this.triangleStructuredView.views[index].a.set([x, 0, z]);
+        this.triangleStructuredView.views[index].b.set([x + s, 0, z]);
+        this.triangleStructuredView.views[index].c.set([x + s, 0, z + s]);
+        this.triangleStructuredView.views[index].aNormal.set([0, 1, 0]);
+        this.triangleStructuredView.views[index].bNormal.set([0, 1, 0]);
+        this.triangleStructuredView.views[index].cNormal.set([0, 1, 0]);
+        this.triangleStructuredView.views[index].materialIndex.set([
+          (i + j) % 2,
+        ]);
+
+        // Triangle 2
+        this.triangleStructuredView.views[index + 64].a.set([x, 0, z]);
+        this.triangleStructuredView.views[index + 64].b.set([x + s, 0, z + s]);
+        this.triangleStructuredView.views[index + 64].c.set([x, 0, z + s]);
+        this.triangleStructuredView.views[index + 64].aNormal.set([0, 1, 0]);
+        this.triangleStructuredView.views[index + 64].bNormal.set([0, 1, 0]);
+        this.triangleStructuredView.views[index + 64].cNormal.set([0, 1, 0]);
+        this.triangleStructuredView.views[index + 64].materialIndex.set([
+          (i + j) % 2,
+        ]);
+      }
+    }
 
     this.renderer.device.queue.writeBuffer(
       this.triangleBuffer,
@@ -102,20 +115,20 @@ export class RaytracePass extends Pass {
 
   private updateMaterialBuffer() {
     // Material 1
-    this.materialStructuredView.views[0].color.set([1, 1, 1]);
+    this.materialStructuredView.views[0].color.set([0, 0, 0]);
     this.materialStructuredView.views[0].specularColor.set([1, 1, 1]);
     this.materialStructuredView.views[0].roughness.set([0.0]);
     this.materialStructuredView.views[0].metalness.set([0.0]);
-    this.materialStructuredView.views[0].emissionColor.set([0, 0, 0]);
-    this.materialStructuredView.views[0].emissionStrength.set([0.0]);
+    this.materialStructuredView.views[0].emissionColor.set([1, 0, 0]);
+    this.materialStructuredView.views[0].emissionStrength.set([1.0]);
 
     // Material 2
     this.materialStructuredView.views[1].color.set([0, 0, 0]);
     this.materialStructuredView.views[1].specularColor.set([1, 1, 1]);
     this.materialStructuredView.views[1].roughness.set([0.0]);
     this.materialStructuredView.views[1].metalness.set([0.0]);
-    this.materialStructuredView.views[1].emissionColor.set([0, 1, 0]);
-    this.materialStructuredView.views[1].emissionStrength.set([4.0]);
+    this.materialStructuredView.views[1].emissionColor.set([1, 1, 1]);
+    this.materialStructuredView.views[1].emissionStrength.set([1.0]);
 
     this.renderer.device.queue.writeBuffer(
       this.materialBuffer,
