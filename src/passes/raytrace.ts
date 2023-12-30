@@ -257,7 +257,7 @@ export class RaytracePass extends Pass {
     }
   }
 
-  public update(time: number) {
+  public update() {
     if (this.renderer.hasFramesToSample) {
       this.renderer.frame++;
     }
@@ -267,7 +267,6 @@ export class RaytracePass extends Pass {
       aspect: this.renderer.aspect,
       frame: this.renderer.frame,
       samplesPerFrame: this.renderer.samplesPerFrame,
-      time,
     });
   }
 
