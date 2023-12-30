@@ -6,6 +6,7 @@ import {
   makeStructuredView,
 } from "webgpu-utils";
 import { Pass } from "./pass";
+import { Scene, Camera, Mesh } from "../scene";
 
 export class RaytracePass extends Pass {
   public pipeline: GPUComputePipeline;
@@ -263,6 +264,15 @@ export class RaytracePass extends Pass {
       aspect: this.renderer.aspect,
       frame: this.renderer.frame,
       samplesPerFrame: this.renderer.samplesPerFrame,
+    });
+  }
+
+  updateScene(scene: Scene, camera: Camera) {
+    const meshes: Mesh[] = [];
+    scene.traverse((object) => {
+      if (object instanceof Mesh) {
+        meshes.push(object);
+      }
     });
   }
 

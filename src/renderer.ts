@@ -241,6 +241,8 @@ export class Renderer {
   }
 
   render(scene: Scene, camera: Camera) {
+    this.passes.raytrace.updateScene(scene, camera);
+
     if (this.status === "sampling" && this.hasFramesToSample) {
       this.frame++;
     }
