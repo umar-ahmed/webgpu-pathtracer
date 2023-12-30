@@ -299,6 +299,28 @@ export class Geometry {
 
     return new Geometry(vertices, normals);
   }
+
+  static createPlane(x: number, y: number) {
+    const vertices = [
+      new Vector3(-x, -y, 0),
+      new Vector3(x, -y, 0),
+      new Vector3(x, y, 0),
+      new Vector3(-x, -y, 0),
+      new Vector3(x, y, 0),
+      new Vector3(-x, y, 0),
+    ];
+
+    const normals = [
+      new Vector3(0, 0, 1),
+      new Vector3(0, 0, 1),
+      new Vector3(0, 0, 1),
+      new Vector3(0, 0, 1),
+      new Vector3(0, 0, 1),
+      new Vector3(0, 0, 1),
+    ];
+
+    return new Geometry(vertices, normals);
+  }
 }
 
 export class Color {
@@ -321,13 +343,17 @@ export class Color {
     this.b = b;
     return this;
   }
+
+  toArray() {
+    return [this.r, this.g, this.b];
+  }
 }
 
 export class Material {
   public color: Color = new Color(1, 1, 1);
   public specularColor: Color = new Color(1, 1, 1);
-  public emissiveColor: Color = new Color(0, 0, 0);
-  public emission: number = 0.0;
+  public emissionColor: Color = new Color(0, 0, 0);
+  public emissionStrength: number = 0.0;
   public roughness: number = 0.0;
   public metalness: number = 0.0;
 }

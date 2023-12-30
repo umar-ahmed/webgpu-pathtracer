@@ -6,7 +6,17 @@ import {
   makeStructuredView,
 } from "webgpu-utils";
 import { Pass } from "./pass";
-import { Scene, Camera, Mesh } from "../scene";
+import { Scene, Camera, Mesh, Material, Vector3 } from "../scene";
+
+type Triangle = {
+  a: Vector3;
+  b: Vector3;
+  c: Vector3;
+  aNormal: Vector3;
+  bNormal: Vector3;
+  cNormal: Vector3;
+  materialIndex: number;
+};
 
 export class RaytracePass extends Pass {
   public pipeline: GPUComputePipeline;
@@ -27,27 +37,26 @@ export class RaytracePass extends Pass {
   constructor(renderer: Renderer) {
     super(renderer);
     this.renderer = renderer;
-    this.triangleStructuredView = this.createTriangleStructuredView();
+
+    this.triangleStructuredView = this.createTriangleStructuredView(2);
     this.triangleBuffer = this.createTriangleBuffer();
-    this.materialStructuredView = this.createMaterialStructuredView();
+    this.materialStructuredView = this.createMaterialStructuredView(1);
     this.materialBuffer = this.createMaterialBuffer();
+
     this.uniforms = this.createUniforms();
     this.uniformsBuffer = this.createUniformsBuffer();
     this.bindGroupLayout = this.createBindGroupLayout();
     this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
 
-    this.updateTriangleBuffer();
-    this.updateMaterialBuffer();
-
     this.renderer.on("resize", this.reset.bind(this));
     this.renderer.on("reset", this.reset.bind(this));
   }
 
-  private createTriangleStructuredView(): StructuredView {
+  private createTriangleStructuredView(triangleCount: number): StructuredView {
     return makeStructuredView(
       this.defs.storages.triangleBuffer,
-      new ArrayBuffer(this.defs.structs.Triangle.size * 2 * 8 * 8)
+      new ArrayBuffer(this.defs.structs.Triangle.size * triangleCount)
     );
   }
 
@@ -58,38 +67,16 @@ export class RaytracePass extends Pass {
     });
   }
 
-  private updateTriangleBuffer() {
-    const s = 0.4;
-
-    for (let i = 0; i < 8; i++) {
-      for (let j = 0; j < 8; j++) {
-        const x = i * s - (8 * s) / 2;
-        const z = j * s - (8 * s) / 2;
-
-        const index = i * 8 + j;
-
-        // Triangle 1
-        this.triangleStructuredView.views[index].a.set([x, 0, z]);
-        this.triangleStructuredView.views[index].b.set([x + s, 0, z]);
-        this.triangleStructuredView.views[index].c.set([x + s, 0, z + s]);
-        this.triangleStructuredView.views[index].aNormal.set([0, 1, 0]);
-        this.triangleStructuredView.views[index].bNormal.set([0, 1, 0]);
-        this.triangleStructuredView.views[index].cNormal.set([0, 1, 0]);
-        this.triangleStructuredView.views[index].materialIndex.set([
-          (i + j) % 2,
-        ]);
-
-        // Triangle 2
-        this.triangleStructuredView.views[index + 64].a.set([x, 0, z]);
-        this.triangleStructuredView.views[index + 64].b.set([x + s, 0, z + s]);
-        this.triangleStructuredView.views[index + 64].c.set([x, 0, z + s]);
-        this.triangleStructuredView.views[index + 64].aNormal.set([0, 1, 0]);
-        this.triangleStructuredView.views[index + 64].bNormal.set([0, 1, 0]);
-        this.triangleStructuredView.views[index + 64].cNormal.set([0, 1, 0]);
-        this.triangleStructuredView.views[index + 64].materialIndex.set([
-          (i + j) % 2,
-        ]);
-      }
+  private updateTriangleBuffer(triangles: Triangle[]) {
+    for (let i = 0; i < triangles.length; i++) {
+      const t = triangles[i];
+      this.triangleStructuredView.views[i].a.set(t.a.toArray());
+      this.triangleStructuredView.views[i].b.set(t.b.toArray());
+      this.triangleStructuredView.views[i].c.set(t.c.toArray());
+      this.triangleStructuredView.views[i].aNormal.set(t.aNormal.toArray());
+      this.triangleStructuredView.views[i].bNormal.set(t.bNormal.toArray());
+      this.triangleStructuredView.views[i].cNormal.set(t.cNormal.toArray());
+      this.triangleStructuredView.views[i].materialIndex.set([t.materialIndex]);
     }
 
     this.renderer.device.queue.writeBuffer(
@@ -99,10 +86,10 @@ export class RaytracePass extends Pass {
     );
   }
 
-  private createMaterialStructuredView(): StructuredView {
+  private createMaterialStructuredView(materialsCount: number): StructuredView {
     return makeStructuredView(
       this.defs.storages.materialBuffer,
-      new ArrayBuffer(this.defs.structs.Material.size * 2)
+      new ArrayBuffer(this.defs.structs.Material.size * materialsCount)
     );
   }
 
@@ -113,22 +100,22 @@ export class RaytracePass extends Pass {
     });
   }
 
-  private updateMaterialBuffer() {
-    // Material 1
-    this.materialStructuredView.views[0].color.set([1, 0, 0]);
-    this.materialStructuredView.views[0].specularColor.set([1, 1, 1]);
-    this.materialStructuredView.views[0].roughness.set([0.0]);
-    this.materialStructuredView.views[0].metalness.set([0.0]);
-    this.materialStructuredView.views[0].emissionColor.set([0, 0, 0]);
-    this.materialStructuredView.views[0].emissionStrength.set([0.0]);
-
-    // Material 2
-    this.materialStructuredView.views[1].color.set([1, 1, 1]);
-    this.materialStructuredView.views[1].specularColor.set([1, 1, 1]);
-    this.materialStructuredView.views[1].roughness.set([0.9]);
-    this.materialStructuredView.views[1].metalness.set([0.0]);
-    this.materialStructuredView.views[1].emissionColor.set([0, 0, 0]);
-    this.materialStructuredView.views[1].emissionStrength.set([0.0]);
+  private updateMaterialBuffer(materials: Material[]) {
+    for (let i = 0; i < materials.length; i++) {
+      const m = materials[i];
+      this.materialStructuredView.views[i].color.set(m.color.toArray());
+      this.materialStructuredView.views[i].specularColor.set(
+        m.specularColor.toArray()
+      );
+      this.materialStructuredView.views[i].roughness.set([m.roughness]);
+      this.materialStructuredView.views[i].metalness.set([m.metalness]);
+      this.materialStructuredView.views[i].emissionColor.set(
+        m.emissionColor.toArray()
+      );
+      this.materialStructuredView.views[i].emissionStrength.set([
+        m.emissionStrength,
+      ]);
+    }
 
     this.renderer.device.queue.writeBuffer(
       this.materialBuffer,
@@ -306,6 +293,47 @@ export class RaytracePass extends Pass {
         meshes.push(object);
       }
     });
+
+    const triangles: Triangle[] = [];
+    const materials: Material[] = [];
+
+    meshes.forEach((mesh) => {
+      const vertices = mesh.geometry.vertices;
+      const normals = mesh.geometry.normals;
+
+      console.assert(vertices.length === normals.length);
+
+      for (let i = 0; i < vertices.length; i += 3) {
+        const a = vertices[i + 0];
+        const b = vertices[i + 1];
+        const c = vertices[i + 2];
+
+        const aNormal = normals[i + 0];
+        const bNormal = normals[i + 1];
+        const cNormal = normals[i + 2];
+
+        let materialIndex = materials.indexOf(mesh.material);
+
+        if (materialIndex === -1) {
+          materialIndex = materials.length;
+          materials.push(mesh.material);
+        }
+
+        triangles.push({ a, b, c, aNormal, bNormal, cNormal, materialIndex });
+      }
+    });
+
+    this.triangleStructuredView = this.createTriangleStructuredView(
+      triangles.length
+    );
+    this.triangleBuffer = this.createTriangleBuffer();
+    this.materialStructuredView = this.createMaterialStructuredView(
+      materials.length
+    );
+    this.materialBuffer = this.createMaterialBuffer();
+
+    this.updateTriangleBuffer(triangles);
+    this.updateMaterialBuffer(materials);
   }
 
   public render(commandEncoder: GPUCommandEncoder) {
