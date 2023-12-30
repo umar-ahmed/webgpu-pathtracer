@@ -29,51 +29,21 @@ const mesh = new Mesh(geometry, material);
 scene.add(mesh);
 
 // Setup Tweakpane
+const pane = new Pane({ title: "Parameters" });
+pane.registerPlugin(EssentialsPlugin);
+pane.registerPlugin(CamerakitPlugin);
+
 const PARAMS = {
   scalingFactor: 0.25,
-  frames: 64,
-  samplesPerFrame: 1,
   maxBounces: 4,
   denoise: true,
   tonemapping: 1,
-  camera: {
-    position: {
-      x: 0.0,
-      y: 2.0,
-      z: -6.0,
-    },
-    direction: {
-      x: 0.0,
-      y: -0.3,
-      z: 1.0,
-    },
-    fov: 45,
-    focalDistance: 4.0,
-    aperture: 0.03,
-  },
 };
-
-const pane = new Pane({ title: "Parameters" });
-
-pane.registerPlugin(EssentialsPlugin);
-pane.registerPlugin(CamerakitPlugin);
 
 const fpsGraph = pane.addBlade({
   view: "fpsgraph",
   label: "fps",
 });
-
-pane
-  .addBinding(material, "color", {
-    min: 0,
-    max: 1,
-    step: 0.01,
-    color: { type: "float" },
-  })
-  .on("change", ({ value }) => {
-    renderer.setUniforms("raytrace", { color: Object.values(value) });
-    renderer.reset();
-  });
 
 const scales = [10, 25, 50, 75, 100];
 pane
@@ -93,86 +63,42 @@ pane
   });
 
 pane
-  .addBinding(PARAMS, "frames", {
-    min: 2,
-    max: 512,
-    step: 1,
-  })
-  .on("change", ({ value, last }) => {
+  .addBinding(renderer, "frames", { min: 2, max: 512, step: 1 })
+  .on("change", ({ last }) => {
     if (!last) return;
-    renderer.frames = value;
     renderer.reset();
   });
 
 pane
-  .addBinding(PARAMS, "samplesPerFrame", {
-    min: 1,
-    max: 16,
-    step: 1,
-  })
-  .on("change", ({ value, last }) => {
+  .addBinding(renderer, "samplesPerFrame", { min: 1, max: 16, step: 1 })
+  .on("change", ({ last }) => {
     if (!last) return;
-    renderer.samplesPerFrame = value;
     renderer.reset();
   });
 
 pane
-  .addBinding(PARAMS, "maxBounces", {
-    min: 0,
-    max: 10,
-    step: 1,
-  })
-  .on("change", ({ value, last }) => {
+  .addBinding(PARAMS, "maxBounces", { min: 0, max: 10, step: 1 })
+  .on("change", ({ last }) => {
     if (!last) return;
-    renderer.setUniforms("raytrace", { maxBounces: value });
+    renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
     renderer.reset();
   });
 
 const cameraFolder = pane.addFolder({ title: "Camera" });
 
-cameraFolder.addBinding(PARAMS.camera, "position").on("change", ({ value }) => {
-  renderer.setUniforms("raytrace", {
-    camera: { position: Object.values(value) },
-  });
-  renderer.reset();
+cameraFolder.addBinding(camera, "position");
+
+cameraFolder.addBinding(camera, "direction");
+
+cameraFolder.addBinding(camera, "fov", {
+  view: "cameraring",
+  min: 10,
+  max: 120,
 });
 
-cameraFolder
-  .addBinding(PARAMS.camera, "direction")
-  .on("change", ({ value }) => {
-    renderer.setUniforms("raytrace", {
-      camera: { direction: Object.values(value) },
-    });
-    renderer.reset();
-  });
+cameraFolder.addBinding(camera, "focalDistance", { min: 0.1, max: 10 });
 
-cameraFolder
-  .addBinding(PARAMS.camera, "fov", {
-    view: "cameraring",
-    min: 10,
-    max: 120,
-  })
-  .on("change", ({ value }) => {
-    renderer.setUniforms("raytrace", { camera: { fov: value } });
-    renderer.reset();
-  });
-
-cameraFolder
-  .addBinding(PARAMS.camera, "focalDistance", { min: 0.1, max: 10 })
-  .on("change", ({ value }) => {
-    renderer.setUniforms("raytrace", { camera: { focalDistance: value } });
-    renderer.reset();
-  });
-
-cameraFolder
-  .addBinding(PARAMS.camera, "aperture", {
-    min: 0.0,
-    max: 0.5,
-  })
-  .on("change", ({ value }) => {
-    renderer.setUniforms("raytrace", { camera: { aperture: value } });
-    renderer.reset();
-  });
+cameraFolder.addBinding(camera, "aperture", { min: 0.0, max: 0.5 });
 
 const postprocessingFolder = pane.addFolder({ title: "Post-processing" });
 
@@ -253,18 +179,12 @@ keyboardControls.on("change", () => {
 });
 
 // Set initial uniforms based on PARAMS
-const uniforms = {
-  ...PARAMS,
+renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
+renderer.setUniforms("fullscreen", {
   denoise: PARAMS.denoise ? 1 : 0,
-  camera: {
-    ...PARAMS.camera,
-    position: Object.values(PARAMS.camera.position),
-    direction: Object.values(PARAMS.camera.direction),
-  },
-};
-renderer.setUniforms("raytrace", uniforms);
-renderer.setUniforms("fullscreen", uniforms);
-renderer.samplesPerFrame = PARAMS.samplesPerFrame;
+  scalingFactor: PARAMS.scalingFactor,
+  tonemapping: PARAMS.tonemapping,
+});
 renderer.scalingFactor = PARAMS.scalingFactor;
 
 // Start rendering
