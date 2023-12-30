@@ -115,20 +115,20 @@ export class RaytracePass extends Pass {
 
   private updateMaterialBuffer() {
     // Material 1
-    this.materialStructuredView.views[0].color.set([0, 0, 0]);
+    this.materialStructuredView.views[0].color.set([1, 0, 0]);
     this.materialStructuredView.views[0].specularColor.set([1, 1, 1]);
     this.materialStructuredView.views[0].roughness.set([0.0]);
     this.materialStructuredView.views[0].metalness.set([0.0]);
-    this.materialStructuredView.views[0].emissionColor.set([1, 0, 0]);
-    this.materialStructuredView.views[0].emissionStrength.set([1.0]);
+    this.materialStructuredView.views[0].emissionColor.set([0, 0, 0]);
+    this.materialStructuredView.views[0].emissionStrength.set([0.0]);
 
     // Material 2
-    this.materialStructuredView.views[1].color.set([0, 0, 0]);
+    this.materialStructuredView.views[1].color.set([1, 1, 1]);
     this.materialStructuredView.views[1].specularColor.set([1, 1, 1]);
-    this.materialStructuredView.views[1].roughness.set([0.0]);
+    this.materialStructuredView.views[1].roughness.set([0.9]);
     this.materialStructuredView.views[1].metalness.set([0.0]);
-    this.materialStructuredView.views[1].emissionColor.set([1, 1, 1]);
-    this.materialStructuredView.views[1].emissionStrength.set([1.0]);
+    this.materialStructuredView.views[1].emissionColor.set([0, 0, 0]);
+    this.materialStructuredView.views[1].emissionStrength.set([0.0]);
 
     this.renderer.device.queue.writeBuffer(
       this.materialBuffer,
