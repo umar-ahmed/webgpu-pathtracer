@@ -21,16 +21,16 @@ const PARAMS = {
   camera: {
     position: {
       x: 0.0,
-      y: 0.6,
-      z: -2.0,
+      y: 2.0,
+      z: -6.0,
     },
     direction: {
       x: 0.0,
-      y: -0.2,
+      y: -0.3,
       z: 1.0,
     },
     fov: 45,
-    focalDistance: 2.0,
+    focalDistance: 4.0,
     aperture: 0.03,
   },
 };
