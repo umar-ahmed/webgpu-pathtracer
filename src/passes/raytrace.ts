@@ -37,17 +37,8 @@ export class RaytracePass extends Pass {
     this.bindGroup = this.createBindGroup();
     this.pipeline = this.createPipeline();
 
-    this.renderer.device.queue.writeBuffer(
-      this.triangleBuffer,
-      0,
-      this.triangleStructuredView.arrayBuffer
-    );
-
-    this.renderer.device.queue.writeBuffer(
-      this.materialBuffer,
-      0,
-      this.materialStructuredView.arrayBuffer
-    );
+    this.updateTriangleBuffer();
+    this.updateMaterialBuffer();
 
     this.renderer.on("resize", this.reset.bind(this));
     this.renderer.on("reset", this.reset.bind(this));
@@ -61,6 +52,13 @@ export class RaytracePass extends Pass {
   }
 
   createTriangleBuffer(): GPUBuffer {
+    return this.renderer.device.createBuffer({
+      size: this.triangleStructuredView.arrayBuffer.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+  }
+
+  private updateTriangleBuffer() {
     const s = 1.0;
 
     // Triangle 1
@@ -81,10 +79,11 @@ export class RaytracePass extends Pass {
     this.triangleStructuredView.views[1].cNormal.set([0, 1, 0]);
     this.triangleStructuredView.views[1].materialIndex.set([1]);
 
-    return this.renderer.device.createBuffer({
-      size: this.triangleStructuredView.arrayBuffer.byteLength,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
+    this.renderer.device.queue.writeBuffer(
+      this.triangleBuffer,
+      0,
+      this.triangleStructuredView.arrayBuffer
+    );
   }
 
   private createMaterialStructuredView(): StructuredView {
@@ -95,6 +94,13 @@ export class RaytracePass extends Pass {
   }
 
   createMaterialBuffer(): GPUBuffer {
+    return this.renderer.device.createBuffer({
+      size: this.materialStructuredView.arrayBuffer.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+  }
+
+  private updateMaterialBuffer() {
     // Material 1
     this.materialStructuredView.views[0].color.set([1, 1, 1]);
     this.materialStructuredView.views[0].specularColor.set([1, 1, 1]);
@@ -111,10 +117,11 @@ export class RaytracePass extends Pass {
     this.materialStructuredView.views[1].emissionColor.set([0, 1, 0]);
     this.materialStructuredView.views[1].emissionStrength.set([4.0]);
 
-    return this.renderer.device.createBuffer({
-      size: this.materialStructuredView.arrayBuffer.byteLength,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
+    this.renderer.device.queue.writeBuffer(
+      this.materialBuffer,
+      0,
+      this.materialStructuredView.arrayBuffer
+    );
   }
 
   private createUniforms() {
