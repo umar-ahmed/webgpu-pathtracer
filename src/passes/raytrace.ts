@@ -335,6 +335,11 @@ export class RaytracePass extends Pass {
             cIndex
           );
 
+          // Transform positions to world space
+          aPosition.applyMatrix4(mesh.matrixWorld);
+          bPosition.applyMatrix4(mesh.matrixWorld);
+          cPosition.applyMatrix4(mesh.matrixWorld);
+
           const aNormal = new THREE.Vector3().fromBufferAttribute(
             normals,
             aIndex
@@ -346,6 +351,17 @@ export class RaytracePass extends Pass {
           const cNormal = new THREE.Vector3().fromBufferAttribute(
             normals,
             cIndex
+          );
+
+          // Transform normals to world space
+          aNormal.applyMatrix3(
+            new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
+          );
+          bNormal.applyMatrix3(
+            new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
+          );
+          cNormal.applyMatrix3(
+            new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
           );
 
           let materialIndex = materials.indexOf(mesh.material);
