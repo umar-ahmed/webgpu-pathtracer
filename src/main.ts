@@ -19,9 +19,10 @@ const renderer = await Renderer.create();
 document.body.appendChild(renderer.canvas);
 
 // Setup Scene
+const scene = new THREE.Scene();
+
 const camera = new RaytracingCamera(45);
 camera.position.copy(new THREE.Vector3(0, 1, 4));
-const scene = new THREE.Scene();
 
 const white = new RaytracingMaterial();
 white.color.set(1.0, 1.0, 1.0);
@@ -35,13 +36,19 @@ red.roughness = 1.0;
 red.metalness = 0.0;
 red.specularColor.set(1.0, 1.0, 1.0);
 
-const plane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), white);
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), white);
 plane.rotateX(-Math.PI / 2);
 scene.add(plane);
 
 const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), red);
 box.position.y = 0.4;
+box.position.z = 0.5;
 scene.add(box);
+
+const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 8), white);
+sphere.position.y = 0.5;
+sphere.position.z = -0.5;
+scene.add(sphere);
 
 // Setup Tweakpane
 const pane = new Pane({ title: "Parameters" });
