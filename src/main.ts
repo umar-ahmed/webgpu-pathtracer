@@ -3,9 +3,9 @@ import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/Addons.js";
 
 import { Renderer } from "./renderer";
-import { KeyboardControls } from "./controls/keyboard";
 import { RaytracingCamera, RaytracingMaterial } from "./scene";
 
 // Check for WebGPU support
@@ -40,6 +40,7 @@ plane.rotateX(-Math.PI / 2);
 scene.add(plane);
 
 const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), red);
+box.position.y = 0.4;
 scene.add(box);
 
 // Setup Tweakpane
@@ -186,12 +187,13 @@ renderer.on("reset", () => NProgress.set(0));
 renderer.on("progress", (progress) => NProgress.set(progress));
 renderer.on("complete", () => NProgress.done());
 
-// Keyboard controls
-const keyboardControls = new KeyboardControls(camera);
-keyboardControls.on("change", () => {
+// Orbit controls
+const orbitControls = new OrbitControls(camera, renderer.canvas);
+orbitControls.addEventListener("change", () => {
   pane.refresh();
   renderer.reset();
 });
+orbitControls.update();
 
 // Set initial uniforms based on PARAMS
 renderer.setUniforms("raytrace", {
@@ -206,7 +208,7 @@ renderer.setUniforms("fullscreen", {
 function render() {
   (fpsGraph as any).begin();
 
-  keyboardControls.update();
+  orbitControls.update();
   renderer.render(scene, camera);
 
   (fpsGraph as any).end();

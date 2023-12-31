@@ -386,8 +386,6 @@ export class RaytracePass extends Pass {
       }
     });
 
-    console.log("Updating scene", triangles.length, materials.length);
-
     this.triangleStructuredView = this.createTriangleStructuredView(
       triangles.length
     );
