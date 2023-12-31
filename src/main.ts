@@ -2,10 +2,11 @@ import { Pane } from "tweakpane";
 import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
 import NProgress from "nprogress";
+import * as THREE from "three";
 
 import { Renderer } from "./renderer";
 import { KeyboardControls } from "./controls/keyboard";
-import { Camera, Geometry, Material, Mesh, Scene, Vector3 } from "./scene";
+import { RaytracingCamera, RaytracingMaterial } from "./scene";
 
 // Check for WebGPU support
 const supported = await Renderer.supported();
@@ -18,32 +19,28 @@ const renderer = await Renderer.create();
 document.body.appendChild(renderer.canvas);
 
 // Setup Scene
-const camera = new Camera(45, 2.0, 0.0);
-camera.position.copy(new Vector3(0, 1, -4));
-camera.rotation.x = 0.1;
-const scene = new Scene();
+const camera = new RaytracingCamera(45);
+camera.position.copy(new THREE.Vector3(0, 1, 4));
+const scene = new THREE.Scene();
 
-const white = new Material();
+const white = new RaytracingMaterial();
 white.color.set(1.0, 1.0, 1.0);
 white.roughness = 1;
 white.metalness = 0.02;
 white.specularColor.set(1.0, 1.0, 1.0);
 
-// const box = new Mesh(Geometry.createBox(0.2, 0.2, 0.2), white);
-// scene.add(box);
-
-const red = new Material();
+const red = new RaytracingMaterial();
 red.color.set(1.0, 0.05, 0.05);
 red.roughness = 1.0;
 red.metalness = 0.0;
 red.specularColor.set(1.0, 1.0, 1.0);
 
-const plane = new Mesh(Geometry.createPlane(1.6, 1), white);
-plane.rotation.x = Math.PI / 2;
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), white);
+plane.rotateX(-Math.PI / 2);
 scene.add(plane);
 
-const sphere = new Mesh(Geometry.createSphere(0.5, 16, 16), red);
-scene.add(sphere);
+const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), red);
+scene.add(box);
 
 // Setup Tweakpane
 const pane = new Pane({ title: "Parameters" });
@@ -138,7 +135,7 @@ cameraFolder
   .on("change", () => renderer.reset());
 
 cameraFolder
-  .addBinding(camera, "direction")
+  .addBinding(camera, "rotation")
   .on("change", () => renderer.reset());
 
 cameraFolder

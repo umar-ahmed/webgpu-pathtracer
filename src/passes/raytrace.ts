@@ -6,15 +6,16 @@ import {
   makeStructuredView,
 } from "webgpu-utils";
 import { Pass } from "./pass";
-import { Scene, Camera, Mesh, Material, Vector3 } from "../scene";
+import * as THREE from "three";
+import { RaytracingCamera, RaytracingMaterial } from "../scene";
 
 type Triangle = {
-  a: Vector3;
-  b: Vector3;
-  c: Vector3;
-  aNormal: Vector3;
-  bNormal: Vector3;
-  cNormal: Vector3;
+  a: THREE.Vector3;
+  b: THREE.Vector3;
+  c: THREE.Vector3;
+  aNormal: THREE.Vector3;
+  bNormal: THREE.Vector3;
+  cNormal: THREE.Vector3;
   materialIndex: number;
 };
 
@@ -100,7 +101,7 @@ export class RaytracePass extends Pass {
     });
   }
 
-  private updateMaterialBuffer(materials: Material[]) {
+  private updateMaterialBuffer(materials: RaytracingMaterial[]) {
     for (let i = 0; i < materials.length; i++) {
       const m = materials[i];
       this.materialStructuredView.views[i].color.set(m.color.toArray());
@@ -110,10 +111,10 @@ export class RaytracePass extends Pass {
       this.materialStructuredView.views[i].roughness.set([m.roughness]);
       this.materialStructuredView.views[i].metalness.set([m.metalness]);
       this.materialStructuredView.views[i].emissionColor.set(
-        m.emissionColor.toArray()
+        m.emissive.toArray()
       );
       this.materialStructuredView.views[i].emissionStrength.set([
-        m.emissionStrength,
+        m.emissiveIntensity,
       ]);
     }
 
@@ -125,7 +126,6 @@ export class RaytracePass extends Pass {
   }
 
   private createUniforms() {
-    console.log(this.defs);
     return makeStructuredView(this.defs.uniforms.uniforms);
   }
 
@@ -274,54 +274,103 @@ export class RaytracePass extends Pass {
     });
   }
 
-  updateScene(scene: Scene, camera: Camera) {
+  updateScene(scene: THREE.Scene, camera: RaytracingCamera) {
     // Update camera uniforms
     this.setUniforms({
       camera: {
-        position: camera.position.toArray(),
-        direction: camera.direction.toArray(),
+        position: camera.getWorldPosition(new THREE.Vector3()).toArray(),
+        direction: camera.getWorldDirection(new THREE.Vector3()).toArray(),
         fov: camera.fov,
         focalDistance: camera.focalDistance,
         aperture: camera.aperture,
       },
     });
 
-    // TODO: Update triangle and material buffers
-    const meshes: Mesh[] = [];
+    // Update triangle and material buffers
+    const meshes: THREE.Mesh<
+      THREE.BufferGeometry<THREE.NormalBufferAttributes>,
+      RaytracingMaterial
+    >[] = [];
+
+    scene.updateMatrixWorld(true);
+
     scene.traverse((object) => {
-      if (object instanceof Mesh) {
+      if (
+        object instanceof THREE.Mesh &&
+        object.visible &&
+        object.material instanceof RaytracingMaterial
+      ) {
         meshes.push(object);
       }
     });
 
     const triangles: Triangle[] = [];
-    const materials: Material[] = [];
+    const materials: RaytracingMaterial[] = [];
 
     meshes.forEach((mesh) => {
-      const vertices = mesh.geometry.vertices;
-      const normals = mesh.geometry.normals;
+      const indices = mesh.geometry.getIndex();
+      const positions = mesh.geometry.getAttribute(
+        "position"
+      ) as THREE.BufferAttribute;
+      const normals = mesh.geometry.getAttribute(
+        "normal"
+      ) as THREE.BufferAttribute;
 
-      console.assert(vertices.length === normals.length);
+      if (indices) {
+        for (let i = 0; i < indices.array.length; i += 3) {
+          const aIndex = indices.array[i + 0];
+          const bIndex = indices.array[i + 1];
+          const cIndex = indices.array[i + 2];
 
-      for (let i = 0; i < vertices.length; i += 3) {
-        const a = vertices[i + 0];
-        const b = vertices[i + 1];
-        const c = vertices[i + 2];
+          const aPosition = new THREE.Vector3().fromBufferAttribute(
+            positions,
+            aIndex
+          );
+          const bPosition = new THREE.Vector3().fromBufferAttribute(
+            positions,
+            bIndex
+          );
+          const cPosition = new THREE.Vector3().fromBufferAttribute(
+            positions,
+            cIndex
+          );
 
-        const aNormal = normals[i + 0];
-        const bNormal = normals[i + 1];
-        const cNormal = normals[i + 2];
+          const aNormal = new THREE.Vector3().fromBufferAttribute(
+            normals,
+            aIndex
+          );
+          const bNormal = new THREE.Vector3().fromBufferAttribute(
+            normals,
+            bIndex
+          );
+          const cNormal = new THREE.Vector3().fromBufferAttribute(
+            normals,
+            cIndex
+          );
 
-        let materialIndex = materials.indexOf(mesh.material);
+          let materialIndex = materials.indexOf(mesh.material);
 
-        if (materialIndex === -1) {
-          materialIndex = materials.length;
-          materials.push(mesh.material);
+          if (materialIndex === -1) {
+            materialIndex = materials.length;
+            materials.push(mesh.material);
+          }
+
+          triangles.push({
+            a: aPosition,
+            b: bPosition,
+            c: cPosition,
+            aNormal,
+            bNormal,
+            cNormal,
+            materialIndex,
+          });
         }
-
-        triangles.push({ a, b, c, aNormal, bNormal, cNormal, materialIndex });
+      } else {
+        console.warn("Mesh does not have indices");
       }
     });
+
+    console.log("Updating scene", triangles.length, materials.length);
 
     this.triangleStructuredView = this.createTriangleStructuredView(
       triangles.length

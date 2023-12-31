@@ -1,5 +1,6 @@
-import { Camera } from "../scene";
+import { RaytracingCamera } from "../scene";
 import { clamp } from "../utils";
+import * as THREE from "three";
 
 type KeyboardControlsEventMap = {
   change: () => void;
@@ -8,11 +9,11 @@ type KeyboardControlsEventMap = {
 export type KeyboardControlsEventType = keyof KeyboardControlsEventMap;
 
 export class KeyboardControls {
-  private object: Camera;
+  private object: RaytracingCamera;
   private state = new Map<string, boolean>();
   private listeners: Map<KeyboardControlsEventType, any[]> = new Map();
 
-  constructor(object: Camera) {
+  constructor(object: RaytracingCamera) {
     this.object = object;
     document.addEventListener("keydown", this.onKeyDown.bind(this));
     document.addEventListener("keyup", this.onKeyUp.bind(this));
@@ -40,32 +41,40 @@ export class KeyboardControls {
     const rotationSpeed = 0.01 * (cam.fov / 120) * speedMultiplier;
 
     if (this.isKeyPressed("w")) {
-      cam.position.add(cam.direction.clone().multiplyScalar(movementSpeed));
+      cam.position.add(
+        new THREE.Vector3(0, 0, -movementSpeed).applyQuaternion(cam.quaternion)
+      );
       didUpdate = true;
     }
 
     if (this.isKeyPressed("s")) {
-      cam.position.sub(cam.direction.clone().multiplyScalar(movementSpeed));
+      cam.position.add(
+        new THREE.Vector3(0, 0, movementSpeed).applyQuaternion(cam.quaternion)
+      );
       didUpdate = true;
     }
 
     if (this.isKeyPressed("a")) {
-      cam.position.add(cam.right.clone().multiplyScalar(movementSpeed));
+      cam.position.add(
+        new THREE.Vector3(-movementSpeed, 0, 0).applyQuaternion(cam.quaternion)
+      );
       didUpdate = true;
     }
 
     if (this.isKeyPressed("d")) {
-      cam.position.sub(cam.right.clone().multiplyScalar(movementSpeed));
+      cam.position.add(
+        new THREE.Vector3(movementSpeed, 0, 0).applyQuaternion(cam.quaternion)
+      );
       didUpdate = true;
     }
 
     if (this.isKeyPressed("ArrowUp")) {
-      cam.rotation.x -= rotationSpeed;
+      cam.rotation.x += rotationSpeed;
       didUpdate = true;
     }
 
     if (this.isKeyPressed("ArrowDown")) {
-      cam.rotation.x += rotationSpeed;
+      cam.rotation.x -= rotationSpeed;
       didUpdate = true;
     }
 

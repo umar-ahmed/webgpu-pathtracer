@@ -1,8 +1,10 @@
+import * as THREE from "three";
+
 import { FullscreenPass } from "./passes/fullscreen";
 import { RaytracePass } from "./passes/raytrace";
 import noiseBase64 from "./assets/noise";
 import { clamp } from "./utils";
-import { Camera, Scene } from "./scene";
+import { RaytracingCamera } from "./scene";
 
 type RendererEventMap = {
   start: () => void;
@@ -31,7 +33,7 @@ export class Renderer {
   public outputTexturePrev: GPUTexture;
   public noiseTexture: GPUTexture;
 
-  private _scalingFactor: number = 0.5;
+  private _scalingFactor: number = 0.25;
   public frames: number = 64;
   public samplesPerFrame: number = 2;
   public status: "idle" | "sampling" | "paused" = "idle";
@@ -250,7 +252,7 @@ export class Renderer {
     this.passes[pass].setUniforms(value);
   }
 
-  render(scene: Scene, camera: Camera) {
+  render(scene: THREE.Scene, camera: RaytracingCamera) {
     this.passes.raytrace.updateScene(scene, camera);
 
     if (this.status === "sampling" && this.hasFramesToSample) {
