@@ -9,10 +9,14 @@ import { Renderer } from "./renderer";
 import { RaytracingCamera, RaytracingMaterial } from "./scene";
 
 // Check for WebGPU support
-const supported = await Renderer.supported();
-if (!supported) {
+const diagnostic = await Renderer.diagnostic();
+if (!diagnostic.supported) {
   throw new Error("WebGPU is not supported.");
 }
+
+// Print out some information about the device
+console.info("✅ WebGPU enabled.");
+console.table(diagnostic.info);
 
 // Create renderer
 const renderer = await Renderer.create();

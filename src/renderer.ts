@@ -38,21 +38,25 @@ export class Renderer {
   public samplesPerFrame: number = 2;
   public status: "idle" | "sampling" | "paused" = "idle";
 
-  static async supported(): Promise<boolean> {
+  static async diagnostic(): Promise<
+    { supported: false } | { supported: true; info: GPUAdapterInfo }
+  > {
     if ("gpu" in navigator === false) {
-      return false;
+      return { supported: false };
     }
 
     try {
       const adapter = await navigator.gpu.requestAdapter();
 
       if (adapter === null) {
-        return false;
+        return { supported: false };
       }
 
-      return true;
+      const info = await adapter.requestAdapterInfo();
+
+      return { supported: true, info };
     } catch (err) {
-      return false;
+      return { supported: false };
     }
   }
 
