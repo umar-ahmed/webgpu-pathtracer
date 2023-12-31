@@ -37,117 +37,29 @@ export class Renderer {
   public frames: number = 64;
   public samplesPerFrame: number = 2;
   public status: "idle" | "sampling" | "paused" = "idle";
+  public options: {
+    readonly enableTimestampQuery: boolean;
+  };
 
-  static async diagnostic(): Promise<
-    { supported: false } | { supported: true; info: GPUAdapterInfo }
-  > {
-    if ("gpu" in navigator === false) {
-      return { supported: false };
-    }
+  private constructor({
+    device,
+    format,
+    noiseTexture,
+    options,
+  }: {
+    device: GPUDevice;
+    format: GPUTextureFormat;
+    noiseTexture: GPUTexture;
+    options?: {
+      enableTimestampQuery?: boolean;
+    };
+  }) {
+    this.options = {
+      enableTimestampQuery: false,
+      ...options,
+    };
 
-    try {
-      const adapter = await navigator.gpu.requestAdapter();
-
-      if (adapter === null) {
-        return { supported: false };
-      }
-
-      const info = await adapter.requestAdapterInfo();
-
-      return { supported: true, info };
-    } catch (err) {
-      return { supported: false };
-    }
-  }
-
-  static async create(): Promise<Renderer> {
-    const adapter = await navigator.gpu.requestAdapter();
-
-    const hasBGRA8unormStorage = adapter?.features.has("bgra8unorm-storage");
-
-    const device = await adapter?.requestDevice({
-      requiredFeatures: hasBGRA8unormStorage ? ["bgra8unorm-storage"] : [],
-    });
-
-    if (!device) {
-      throw new Error("WebGPU device not found.");
-    }
-
-    const format = hasBGRA8unormStorage
-      ? navigator.gpu.getPreferredCanvasFormat()
-      : "rgba8unorm";
-
-    const noiseTexture = await Renderer.loadNoiseTexture(device);
-
-    const renderer = new Renderer(device, format, noiseTexture);
-
-    Renderer.registerResizeObserver(renderer);
-
-    return renderer;
-  }
-
-  private static registerResizeObserver(renderer: Renderer) {
-    const observer = new ResizeObserver(([entry]) => {
-      const dpr = clamp(window.devicePixelRatio, 1, 2);
-      const maxDimension = renderer.device.limits.maxTextureDimension2D;
-      const width = clamp(
-        entry.devicePixelContentBoxSize?.[0].inlineSize ||
-          entry.contentBoxSize[0].inlineSize * dpr,
-        1,
-        maxDimension
-      );
-      const height = clamp(
-        entry.devicePixelContentBoxSize?.[0].blockSize ||
-          entry.contentBoxSize[0].blockSize * dpr,
-        1,
-        maxDimension
-      );
-
-      renderer.resize(width, height);
-    });
-
-    try {
-      observer.observe(renderer.canvas, { box: "device-pixel-content-box" });
-    } catch {
-      observer.observe(renderer.canvas, { box: "content-box" });
-    }
-  }
-
-  private static async loadNoiseTexture(device: GPUDevice) {
-    const image = new Image();
-    image.src = noiseBase64;
-    await image.decode();
-
-    const source = await createImageBitmap(image);
-
-    const texture = device.createTexture({
-      label: "Noise Texture",
-      format: "rgba8unorm",
-      size: [source.width, source.height],
-      usage:
-        GPUTextureUsage.TEXTURE_BINDING |
-        GPUTextureUsage.COPY_DST |
-        GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    device.queue.copyExternalImageToTexture(
-      { source, flipY: true },
-      { texture },
-      { width: source.width, height: source.height }
-    );
-
-    await device.queue.onSubmittedWorkDone();
-
-    return texture;
-  }
-
-  private constructor(
-    device: GPUDevice,
-    format: GPUTextureFormat,
-    noiseTexture: GPUTexture
-  ) {
     this._canvas = document.createElement("canvas");
-
     const context = this._canvas.getContext("webgpu");
     if (context === null) {
       throw new Error("WebGPU not supported.");
@@ -252,6 +164,13 @@ export class Renderer {
     }
   }
 
+  get timings() {
+    return {
+      raytrace: this.passes.raytrace.timingAverage,
+      fullscreen: this.passes.fullscreen.timingAverage,
+    };
+  }
+
   setUniforms(pass: keyof typeof this.passes, value: any) {
     this.passes[pass].setUniforms(value);
   }
@@ -277,6 +196,11 @@ export class Renderer {
 
     const commandBuffer = commandEncoder.finish();
     this.device.queue.submit([commandBuffer]);
+
+    if (this.status === "sampling" && this.hasFramesToSample) {
+      this.passes.raytrace.updateTimings();
+    }
+    this.passes.fullscreen.updateTimings();
   }
 
   reset() {
@@ -338,5 +262,124 @@ export class Renderer {
   emit(event: "resize"): void;
   emit(event: RendererEventType, ...args: any[]) {
     this.listeners.get(event)?.forEach((callback: any) => callback(...args));
+  }
+
+  static async diagnostic(): Promise<
+    { supported: false } | { supported: true; info: GPUAdapterInfo }
+  > {
+    if ("gpu" in navigator === false) {
+      return { supported: false };
+    }
+
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+
+      if (adapter === null) {
+        return { supported: false };
+      }
+
+      const info = await adapter.requestAdapterInfo();
+
+      return { supported: true, info };
+    } catch (err) {
+      return { supported: false };
+    }
+  }
+
+  static async create(): Promise<Renderer> {
+    const adapter = await navigator.gpu.requestAdapter();
+
+    const hasBGRA8unormStorage =
+      adapter?.features.has("bgra8unorm-storage") ?? false;
+    const hasTimestampQuery = adapter?.features.has("timestamp-query") ?? false;
+
+    const requiredFeatures: GPUFeatureName[] = [];
+
+    if (hasBGRA8unormStorage) {
+      requiredFeatures.push("bgra8unorm-storage");
+    }
+    if (hasTimestampQuery) {
+      requiredFeatures.push("timestamp-query");
+    }
+
+    const device = await adapter?.requestDevice({ requiredFeatures });
+
+    if (!device) {
+      throw new Error("WebGPU device not found.");
+    }
+
+    const format = hasBGRA8unormStorage
+      ? navigator.gpu.getPreferredCanvasFormat()
+      : "rgba8unorm";
+
+    const noiseTexture = await Renderer.loadNoiseTexture(device);
+
+    const renderer = new Renderer({
+      device,
+      format,
+      noiseTexture,
+      options: {
+        enableTimestampQuery: hasTimestampQuery,
+      },
+    });
+
+    Renderer.registerResizeObserver(renderer);
+
+    return renderer;
+  }
+
+  private static registerResizeObserver(renderer: Renderer) {
+    const observer = new ResizeObserver(([entry]) => {
+      const dpr = clamp(window.devicePixelRatio, 1, 2);
+      const maxDimension = renderer.device.limits.maxTextureDimension2D;
+      const width = clamp(
+        entry.devicePixelContentBoxSize?.[0].inlineSize ||
+          entry.contentBoxSize[0].inlineSize * dpr,
+        1,
+        maxDimension
+      );
+      const height = clamp(
+        entry.devicePixelContentBoxSize?.[0].blockSize ||
+          entry.contentBoxSize[0].blockSize * dpr,
+        1,
+        maxDimension
+      );
+
+      renderer.resize(width, height);
+    });
+
+    try {
+      observer.observe(renderer.canvas, { box: "device-pixel-content-box" });
+    } catch {
+      observer.observe(renderer.canvas, { box: "content-box" });
+    }
+  }
+
+  private static async loadNoiseTexture(device: GPUDevice) {
+    const image = new Image();
+    image.src = noiseBase64;
+    await image.decode();
+
+    const source = await createImageBitmap(image);
+
+    const texture = device.createTexture({
+      label: "Noise Texture",
+      format: "rgba8unorm",
+      size: [source.width, source.height],
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    device.queue.copyExternalImageToTexture(
+      { source, flipY: true },
+      { texture },
+      { width: source.width, height: source.height }
+    );
+
+    await device.queue.onSubmittedWorkDone();
+
+    return texture;
   }
 }

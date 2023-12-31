@@ -70,6 +70,28 @@ const fpsGraph = pane.addBlade({
   label: "fps",
 });
 
+pane.addBinding(renderer.timings.raytrace, "value", {
+  label: "raytrace",
+  readonly: true,
+  format: (value) =>
+    value.toLocaleString(undefined, {
+      style: "unit",
+      unit: "microsecond",
+      unitDisplay: "short",
+    }),
+});
+
+pane.addBinding(renderer.timings.fullscreen, "value", {
+  label: "fullscreen",
+  readonly: true,
+  format: (value) =>
+    value.toLocaleString(undefined, {
+      style: "unit",
+      unit: "microsecond",
+      unitDisplay: "short",
+    }),
+});
+
 pane.addBinding(renderer, "progress", {
   readonly: true,
   format: (value) =>

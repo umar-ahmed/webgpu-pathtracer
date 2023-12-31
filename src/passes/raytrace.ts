@@ -403,9 +403,10 @@ export class RaytracePass extends Pass {
     const workgroupsX = Math.ceil(this.renderer.scaledWidth / 8);
     const workgroupsY = Math.ceil(this.renderer.scaledHeight / 8);
 
-    const computePassEncoder = commandEncoder.beginComputePass({
-      label: "Compute Pass",
-    });
+    const computePassEncoder = this.timingHelper.beginComputePass(
+      commandEncoder,
+      { label: "Compute Pass" }
+    );
     computePassEncoder.setPipeline(this.pipeline);
     computePassEncoder.setBindGroup(0, this.bindGroup);
     computePassEncoder.dispatchWorkgroups(workgroupsX, workgroupsY, 1);

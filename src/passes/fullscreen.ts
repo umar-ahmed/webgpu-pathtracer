@@ -156,16 +156,19 @@ export class FullscreenPass extends Pass {
   }
 
   public render(commandEncoder: GPUCommandEncoder) {
-    const renderPassEncoder = commandEncoder.beginRenderPass({
-      label: "Fullscreen Render Pass",
-      colorAttachments: [
-        {
-          view: this.renderer.context.getCurrentTexture().createView(),
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    });
+    const renderPassEncoder = this.timingHelper.beginRenderPass(
+      commandEncoder,
+      {
+        label: "Fullscreen Render Pass",
+        colorAttachments: [
+          {
+            view: this.renderer.context.getCurrentTexture().createView(),
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      }
+    );
     renderPassEncoder.setPipeline(this.pipeline);
     renderPassEncoder.setBindGroup(0, this.bindGroup);
     renderPassEncoder.draw(6);
