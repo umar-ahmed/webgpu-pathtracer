@@ -21,8 +21,8 @@
 - [x] 🎨 Tone-mapping
 - [x] 🌫️ Denoising
 - [x] 📸 Camera controls
+- [x] 🔺 Triangle meshes
 - [ ] 🪙 PBR materials
-- [ ] 🔺 Triangle meshes
 - [ ] 🗺️ Environment maps
 - [ ] 📦 Bounding volume hierarchies (BVH)
 - [ ] 🤹 Multiple importance sampling (MIS)
