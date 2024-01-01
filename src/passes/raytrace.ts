@@ -19,6 +19,16 @@ type Triangle = {
   materialIndex: number;
 };
 
+type BVHNode = {
+  min: THREE.Vector3;
+  max: THREE.Vector3;
+  left: number;
+  right: number;
+  triangleIndex: number;
+  triangleCount: number;
+  isLeaf: boolean;
+};
+
 export class RaytracePass extends Pass {
   public pipeline: GPUComputePipeline;
 
@@ -28,6 +38,8 @@ export class RaytracePass extends Pass {
   private triangleBuffer: GPUBuffer;
   private materialStructuredView: StructuredView;
   private materialBuffer: GPUBuffer;
+  private bvhStructuredView: StructuredView;
+  private bvhBuffer: GPUBuffer;
 
   private uniforms: StructuredView;
   private uniformsBuffer: GPUBuffer;
@@ -43,6 +55,8 @@ export class RaytracePass extends Pass {
     this.triangleBuffer = this.createTriangleBuffer();
     this.materialStructuredView = this.createMaterialStructuredView(1);
     this.materialBuffer = this.createMaterialBuffer();
+    this.bvhStructuredView = this.createBVHStructuredView(1);
+    this.bvhBuffer = this.createBVHBuffer();
 
     this.uniforms = this.createUniforms();
     this.uniformsBuffer = this.createUniformsBuffer();
@@ -63,6 +77,7 @@ export class RaytracePass extends Pass {
 
   private createTriangleBuffer(): GPUBuffer {
     return this.renderer.device.createBuffer({
+      label: "Triangle Buffer",
       size: this.triangleStructuredView.arrayBuffer.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -96,6 +111,7 @@ export class RaytracePass extends Pass {
 
   private createMaterialBuffer(): GPUBuffer {
     return this.renderer.device.createBuffer({
+      label: "Material Buffer",
       size: this.materialStructuredView.arrayBuffer.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -122,6 +138,40 @@ export class RaytracePass extends Pass {
       this.materialBuffer,
       0,
       this.materialStructuredView.arrayBuffer
+    );
+  }
+
+  private createBVHStructuredView(bvhCount: number): StructuredView {
+    return makeStructuredView(
+      this.defs.storages.bvhBuffer,
+      new ArrayBuffer(this.defs.structs.BVHNode.size * bvhCount)
+    );
+  }
+
+  private createBVHBuffer(): GPUBuffer {
+    return this.renderer.device.createBuffer({
+      label: "BVH Buffer",
+      size: this.bvhStructuredView.arrayBuffer.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+  }
+
+  private updateBVHBuffer(nodes: BVHNode[]) {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      this.bvhStructuredView.views[i].min.set(node.min.toArray());
+      this.bvhStructuredView.views[i].max.set(node.max.toArray());
+      this.bvhStructuredView.views[i].left.set([node.left]);
+      this.bvhStructuredView.views[i].right.set([node.right]);
+      this.bvhStructuredView.views[i].triangleIndex.set([node.triangleIndex]);
+      this.bvhStructuredView.views[i].triangleCount.set([node.triangleCount]);
+      this.bvhStructuredView.views[i].isLeaf.set([node.isLeaf ? 1 : 0]);
+    }
+
+    this.renderer.device.queue.writeBuffer(
+      this.bvhBuffer,
+      0,
+      this.bvhStructuredView.arrayBuffer
     );
   }
 
@@ -159,11 +209,18 @@ export class RaytracePass extends Pass {
           binding: 2,
           visibility: GPUShaderStage.COMPUTE,
           buffer: {
-            type: "uniform",
+            type: "read-only-storage",
           },
         },
         {
           binding: 3,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: {
+            type: "uniform",
+          },
+        },
+        {
+          binding: 4,
           visibility: GPUShaderStage.COMPUTE,
           texture: {
             viewDimension: "2d",
@@ -172,7 +229,7 @@ export class RaytracePass extends Pass {
           },
         },
         {
-          binding: 4,
+          binding: 5,
           visibility: GPUShaderStage.COMPUTE,
           storageTexture: {
             access: "write-only",
@@ -180,7 +237,7 @@ export class RaytracePass extends Pass {
           },
         },
         {
-          binding: 5,
+          binding: 6,
           visibility: GPUShaderStage.COMPUTE,
           texture: {
             viewDimension: "2d",
@@ -214,20 +271,27 @@ export class RaytracePass extends Pass {
         {
           binding: 2,
           resource: {
+            label: "BVH Buffer",
+            buffer: this.bvhBuffer,
+          },
+        },
+        {
+          binding: 3,
+          resource: {
             label: "Uniforms Buffer",
             buffer: this.uniformsBuffer,
           },
         },
         {
-          binding: 3,
+          binding: 4,
           resource: this.renderer.noiseTexture.createView(),
         },
         {
-          binding: 4,
+          binding: 5,
           resource: this.renderer.outputTexture.createView(),
         },
         {
-          binding: 5,
+          binding: 6,
           resource: this.renderer.outputTexturePrev.createView(),
         },
       ],
@@ -386,6 +450,19 @@ export class RaytracePass extends Pass {
       }
     });
 
+    // Build BVH
+    const bvhNodes: BVHNode[] = [
+      {
+        min: new THREE.Vector3(-10, -10, -10),
+        max: new THREE.Vector3(10, 10, 10),
+        left: -1,
+        right: -1,
+        triangleIndex: 0,
+        triangleCount: triangles.length,
+        isLeaf: true,
+      },
+    ];
+
     this.triangleStructuredView = this.createTriangleStructuredView(
       triangles.length
     );
@@ -394,9 +471,12 @@ export class RaytracePass extends Pass {
       materials.length
     );
     this.materialBuffer = this.createMaterialBuffer();
+    this.bvhStructuredView = this.createBVHStructuredView(bvhNodes.length);
+    this.bvhBuffer = this.createBVHBuffer();
 
     this.updateTriangleBuffer(triangles);
     this.updateMaterialBuffer(materials);
+    this.updateBVHBuffer(bvhNodes);
   }
 
   public render(commandEncoder: GPUCommandEncoder) {

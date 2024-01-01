@@ -5,6 +5,7 @@ const INVPI = 0.31830988618;
 const INVTWOPI = 0.15915494309;
 const INF = 1e20;
 const EPSILON = 1e-6;
+const MAX_STACK_SIZE = 64;
 
 struct Camera {
   position: vec3f,
@@ -44,6 +45,19 @@ struct Triangle {
   bNormal: vec3f,
   cNormal: vec3f,
   materialIndex: i32,
+  aabbIndex: i32,
+};
+
+struct BVHNode {
+  min: vec3f,
+  max: vec3f,
+  left: i32,
+  right: i32,
+  triangleIndex: i32,
+  triangleCount: i32,
+
+  // 0 = leaf, 1 = internal
+  isLeaf: i32,
 };
 
 struct Uniforms {
@@ -95,22 +109,78 @@ fn rayTriangleIntersect(ray: Ray, triangle: Triangle) -> Hit {
 
   return hit;
 }
-  
 
-fn raySceneIntersect(ray: Ray) -> Hit {
-  var closestHit: Hit;
-  closestHit.hit = false;
-  closestHit.t = INF;
+fn rayAABBIntersect(ray: Ray, aabbMin: vec3f, aabbMax: vec3f) -> bool {
+  let t1 = (aabbMin.x - ray.origin.x) / ray.direction.x;
+  let t2 = (aabbMax.x - ray.origin.x) / ray.direction.x;
+  let t3 = (aabbMin.y - ray.origin.y) / ray.direction.y;
+  let t4 = (aabbMax.y - ray.origin.y) / ray.direction.y;
+  let t5 = (aabbMin.z - ray.origin.z) / ray.direction.z;
+  let t6 = (aabbMax.z - ray.origin.z) / ray.direction.z;
 
-  for (var i = 0u; i < arrayLength(&triangleBuffer); i++) {
-    let triangle = triangleBuffer[i];
-    let hit = rayTriangleIntersect(ray, triangle);
-    if (hit.hit && hit.t < closestHit.t) {
-      closestHit = hit;
+  let tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
+  let tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+
+  return tmax >= max(0.0, tmin);
+}
+
+fn rayBVHIntersect(ray: Ray, bvh: BVHNode) -> Hit {
+  var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, -1);
+
+  if (!rayAABBIntersect(ray, bvh.min, bvh.max)) {
+    return hit;
+  }
+
+  var stack: array<BVHNode, MAX_STACK_SIZE>;
+  var stackSize: i32 = 0;
+  stack[stackSize] = bvh;
+  stackSize++;
+
+  while (stackSize > 0 && stackSize < MAX_STACK_SIZE) {
+    stackSize--;
+    var currentNode = stack[stackSize];
+
+    if (currentNode.isLeaf == 1) {
+      var closestHit: Hit;
+      closestHit.hit = false;
+      closestHit.t = INF;
+
+      for (var i = 0; i < currentNode.triangleCount; i++) {
+        let triangle = triangleBuffer[currentNode.triangleIndex + i];
+        let hit = rayTriangleIntersect(ray, triangle);
+        if (hit.hit && hit.t < closestHit.t) {
+          closestHit = hit;
+        }
+      }
+
+      if (closestHit.hit && closestHit.t < hit.t) {
+        hit = closestHit;
+      }
+    } else {
+      let leftNode = bvhBuffer[currentNode.left];
+      let rightNode = bvhBuffer[currentNode.right];
+
+      if (rayAABBIntersect(ray, leftNode.min, leftNode.max)) {
+        stack[stackSize] = leftNode;
+        stackSize++;
+      }
+
+      if (rayAABBIntersect(ray, rightNode.min, rightNode.max)) {
+        stack[stackSize] = rightNode;
+        stackSize++;
+      }
     }
   }
 
-  return closestHit;
+  return hit;
+}
+
+fn raySceneIntersect(ray: Ray) -> Hit {
+  if (arrayLength(&bvhBuffer) == 0) {
+    return Hit(false, vec3f(0.0), vec3f(0.0), INF, -1);
+  } else {
+    return rayBVHIntersect(ray, bvhBuffer[0]);
+  }
 }
 
 fn degToRad(degrees: f32) -> f32 {
@@ -231,10 +301,11 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
 
 @group(0) @binding(0) var<storage, read> triangleBuffer: array<Triangle>;
 @group(0) @binding(1) var<storage, read> materialBuffer: array<Material>;
-@group(0) @binding(2) var<uniform> uniforms: Uniforms;
-@group(0) @binding(3) var blueNoiseTexture: texture_2d<f32>;
-@group(0) @binding(4) var outputTexture: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(5) var outputTexturePrev: texture_2d<f32>;
+@group(0) @binding(2) var<storage, read> bvhBuffer: array<BVHNode>;
+@group(0) @binding(3) var<uniform> uniforms: Uniforms;
+@group(0) @binding(4) var blueNoiseTexture: texture_2d<f32>;
+@group(0) @binding(5) var outputTexture: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(6) var outputTexturePrev: texture_2d<f32>;
 
 @compute @workgroup_size(8, 8)
 fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
