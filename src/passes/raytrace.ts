@@ -364,6 +364,7 @@ export class RaytracePass extends Pass {
         object.visible &&
         object.material instanceof RaytracingMaterial
       ) {
+        object.geometry.computeBoundingBox();
         meshes.push(object);
       }
     });
