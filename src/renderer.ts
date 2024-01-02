@@ -1,5 +1,3 @@
-import * as THREE from "three";
-
 import { FullscreenPass } from "./passes/fullscreen";
 import { RaytracePass } from "./passes/raytrace";
 import noiseBase64 from "./assets/noise";
