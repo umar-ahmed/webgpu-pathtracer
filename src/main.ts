@@ -49,7 +49,7 @@ box.position.y = 0.4;
 box.position.z = 0.5;
 scene.add(box);
 
-const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 8), white);
+const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), white);
 sphere.position.y = 0.5;
 sphere.position.z = -0.5;
 scene.add(sphere);
