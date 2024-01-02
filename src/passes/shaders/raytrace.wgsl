@@ -51,13 +51,16 @@ struct Triangle {
 struct BVHNode {
   min: vec3f,
   max: vec3f,
-  left: i32,
-  right: i32,
-  triangleIndex: i32,
-  triangleCount: i32,
 
   // 0 = leaf, 1 = internal
   isLeaf: i32,
+
+  // If isLeaf is 0, then these are -1
+  left: i32,
+  right: i32,
+
+  // If isLeaf is 1, then this is -1
+  triangleIndex: i32,
 };
 
 struct Uniforms {
@@ -141,33 +144,26 @@ fn rayBVHIntersect(ray: Ray, bvh: BVHNode) -> Hit {
     var currentNode = stack[stackSize];
 
     if (currentNode.isLeaf == 1) {
-      var closestHit: Hit;
-      closestHit.hit = false;
-      closestHit.t = INF;
-
-      for (var i = 0; i < currentNode.triangleCount; i++) {
-        let triangle = triangleBuffer[currentNode.triangleIndex + i];
-        let hit = rayTriangleIntersect(ray, triangle);
-        if (hit.hit && hit.t < closestHit.t) {
-          closestHit = hit;
+      let triangle = triangleBuffer[currentNode.triangleIndex];
+      let triangleHit = rayTriangleIntersect(ray, triangle);
+      if (triangleHit.hit && triangleHit.t < hit.t) {
+        hit = triangleHit;
+      }
+    } else {
+      if (currentNode.left >= 0) {
+        let leftNode = bvhBuffer[currentNode.left];
+        if (rayAABBIntersect(ray, leftNode.min, leftNode.max)) {
+          stack[stackSize] = leftNode;
+          stackSize++;
         }
       }
 
-      if (closestHit.hit && closestHit.t < hit.t) {
-        hit = closestHit;
-      }
-    } else {
-      let leftNode = bvhBuffer[currentNode.left];
-      let rightNode = bvhBuffer[currentNode.right];
-
-      if (rayAABBIntersect(ray, leftNode.min, leftNode.max)) {
-        stack[stackSize] = leftNode;
-        stackSize++;
-      }
-
-      if (rayAABBIntersect(ray, rightNode.min, rightNode.max)) {
-        stack[stackSize] = rightNode;
-        stackSize++;
+      if (currentNode.right >= 0) {
+        let rightNode = bvhBuffer[currentNode.right];
+        if (rayAABBIntersect(ray, rightNode.min, rightNode.max)) {
+          stack[stackSize] = rightNode;
+          stackSize++;
+        }
       }
     }
   }

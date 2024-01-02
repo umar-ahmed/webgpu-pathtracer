@@ -7,7 +7,11 @@ import {
 } from "webgpu-utils";
 import { Pass } from "./pass";
 import * as THREE from "three";
-import { RaytracingCamera, RaytracingMaterial } from "../scene";
+import {
+  RaytracingCamera,
+  RaytracingMaterial,
+  RaytracingScene,
+} from "../scene";
 
 type Triangle = {
   a: THREE.Vector3;
@@ -19,14 +23,28 @@ type Triangle = {
   materialIndex: number;
 };
 
-type BVHNode = {
-  min: THREE.Vector3;
-  max: THREE.Vector3;
+type BVHLeafNode = {
+  bbox: THREE.Box3;
+  isLeaf: true;
+  triangleIndex: number;
+};
+
+type BVHInternalNode = {
+  bbox: THREE.Box3;
+  isLeaf: false;
+  left: BVHNode;
+  right: BVHNode;
+};
+
+type BVHNode = BVHLeafNode | BVHInternalNode;
+
+type BVHNodeFlat = {
+  min: number[];
+  max: number[];
+  isLeaf: number;
   left: number;
   right: number;
   triangleIndex: number;
-  triangleCount: number;
-  isLeaf: boolean;
 };
 
 export class RaytracePass extends Pass {
@@ -156,16 +174,15 @@ export class RaytracePass extends Pass {
     });
   }
 
-  private updateBVHBuffer(nodes: BVHNode[]) {
+  private updateBVHBuffer(nodes: BVHNodeFlat[]) {
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
-      this.bvhStructuredView.views[i].min.set(node.min.toArray());
-      this.bvhStructuredView.views[i].max.set(node.max.toArray());
+      this.bvhStructuredView.views[i].min.set(node.min);
+      this.bvhStructuredView.views[i].max.set(node.max);
+      this.bvhStructuredView.views[i].isLeaf.set([node.isLeaf]);
       this.bvhStructuredView.views[i].left.set([node.left]);
       this.bvhStructuredView.views[i].right.set([node.right]);
       this.bvhStructuredView.views[i].triangleIndex.set([node.triangleIndex]);
-      this.bvhStructuredView.views[i].triangleCount.set([node.triangleCount]);
-      this.bvhStructuredView.views[i].isLeaf.set([node.isLeaf ? 1 : 0]);
     }
 
     this.renderer.device.queue.writeBuffer(
@@ -338,7 +355,7 @@ export class RaytracePass extends Pass {
     });
   }
 
-  updateScene(scene: THREE.Scene, camera: RaytracingCamera) {
+  updateScene(scene: RaytracingScene, camera: RaytracingCamera) {
     // Update camera uniforms
     this.setUniforms({
       camera: {
@@ -350,25 +367,29 @@ export class RaytracePass extends Pass {
       },
     });
 
-    // Update triangle and material buffers
+    if (!scene.needsUpdate) {
+      return;
+    }
+
+    // Update scene matrix world
+    scene.updateMatrixWorld(true);
+
+    // Get all meshes to render
     const meshes: THREE.Mesh<
       THREE.BufferGeometry<THREE.NormalBufferAttributes>,
       RaytracingMaterial
     >[] = [];
-
-    scene.updateMatrixWorld(true);
-
     scene.traverse((object) => {
       if (
         object instanceof THREE.Mesh &&
         object.visible &&
         object.material instanceof RaytracingMaterial
       ) {
-        object.geometry.computeBoundingBox();
         meshes.push(object);
       }
     });
 
+    // Build list of triangles and materials
     const triangles: Triangle[] = [];
     const materials: RaytracingMaterial[] = [];
 
@@ -451,33 +472,147 @@ export class RaytracePass extends Pass {
       }
     });
 
-    // Build BVH
-    const bvhNodes: BVHNode[] = [
-      {
-        min: new THREE.Vector3(-10, -10, -10),
-        max: new THREE.Vector3(10, 10, 10),
-        left: -1,
-        right: -1,
-        triangleIndex: 0,
-        triangleCount: triangles.length,
-        isLeaf: true,
-      },
-    ];
+    // Build BVH and update BVH buffer
+    const bvh = this.buildBVH(triangles);
+    const nodes = this.flattenBVH(bvh);
+    this.bvhStructuredView = this.createBVHStructuredView(nodes.length);
+    this.bvhBuffer = this.createBVHBuffer();
+    this.updateBVHBuffer(nodes);
 
+    // Update triangle buffers
     this.triangleStructuredView = this.createTriangleStructuredView(
       triangles.length
     );
     this.triangleBuffer = this.createTriangleBuffer();
+    this.updateTriangleBuffer(triangles);
+
+    // Update material buffers
     this.materialStructuredView = this.createMaterialStructuredView(
       materials.length
     );
     this.materialBuffer = this.createMaterialBuffer();
-    this.bvhStructuredView = this.createBVHStructuredView(bvhNodes.length);
-    this.bvhBuffer = this.createBVHBuffer();
-
-    this.updateTriangleBuffer(triangles);
     this.updateMaterialBuffer(materials);
-    this.updateBVHBuffer(bvhNodes);
+
+    // Mark scene as updated
+    scene.needsUpdate = false;
+
+    console.log(nodes);
+  }
+
+  /**
+   * Build BVH tree from input triangles and return the root node.
+   *
+   * @param triangles input triangles
+   */
+  private buildBVH(triangles: Triangle[]): BVHNode {
+    const inputNodes: BVHNode[] = [];
+
+    // Create node for each triangle
+    for (let i = 0; i < triangles.length; i++) {
+      const t = triangles[i];
+      const bbox = new THREE.Box3().setFromPoints([t.a, t.b, t.c]);
+      inputNodes.push({
+        bbox,
+        isLeaf: true,
+        triangleIndex: i,
+      });
+    }
+
+    // Build BVH tree
+    return this.buildBVHRecursive(inputNodes);
+  }
+
+  private buildBVHRecursive(inputNodes: BVHNode[]): BVHNode {
+    if (inputNodes.length === 0) {
+      throw new Error("Input nodes array is empty");
+    }
+
+    if (inputNodes.length === 1) {
+      // If there is only one input node, return it as a leaf node
+      return inputNodes[0];
+    }
+
+    // Create a new node
+    const node: BVHInternalNode = {
+      bbox: new THREE.Box3(),
+      isLeaf: false,
+      left: null!,
+      right: null!,
+    };
+
+    // Calculate bounding box of all input nodes
+    for (const inputNode of inputNodes) {
+      node.bbox.expandByPoint(inputNode.bbox.min);
+      node.bbox.expandByPoint(inputNode.bbox.max);
+    }
+
+    // If there are only two input nodes, use them as children
+    if (inputNodes.length === 2) {
+      node.left = inputNodes[0];
+      node.right = inputNodes[1];
+    } else {
+      // Find the longest axis of the bounding box
+      const size = node.bbox.getSize(new THREE.Vector3());
+      const axis = size.x > size.y ? (size.x > size.z ? "x" : "z") : "y";
+
+      // Sort input nodes by their center position on the longest axis
+      inputNodes.sort((a, b) => {
+        const centerA = a.bbox.getCenter(new THREE.Vector3())[axis];
+        const centerB = b.bbox.getCenter(new THREE.Vector3())[axis];
+        return centerA - centerB;
+      });
+
+      // Split input nodes into two halves
+      const half = Math.ceil(inputNodes.length / 2);
+      const leftNodes = inputNodes.slice(0, half);
+      const rightNodes = inputNodes.slice(half);
+
+      // Recursively build BVH tree for the two halves
+      node.left = this.buildBVHRecursive(leftNodes);
+      node.right = this.buildBVHRecursive(rightNodes);
+    }
+
+    return node;
+  }
+
+  /**
+   * Flatten BVH tree into a flat array of nodes. The nodes are stored in a
+   * breadth-first order. Each node has a left and right index that points to
+   * the children nodes. If the node is a leaf node, the left and right index
+   * will be -1 and the triangle index will point to the triangle in the
+   * triangle array. The first node in the array is the root node. Leaf nodes
+   * always contain a single triangle.
+   *
+   * @param rootNode Root node of the BVH tree
+   */
+  private flattenBVH(rootNode: BVHNode): BVHNodeFlat[] {
+    // Flatten tree into a breadth-first array of nodes
+    const nodes: BVHNode[] = [];
+    const queue: BVHNode[] = [rootNode];
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      nodes.push(node);
+      if (!node.isLeaf) {
+        nodes.push(node);
+        queue.push(node.left);
+        queue.push(node.right);
+      }
+    }
+
+    // Convert references to indices, so we can store the tree in a buffer
+    const flatNodes: BVHNodeFlat[] = [];
+    for (const node of nodes) {
+      flatNodes.push({
+        min: node.bbox.min.toArray(),
+        max: node.bbox.max.toArray(),
+        isLeaf: node.isLeaf ? 1 : 0,
+        left: node.isLeaf ? -1 : nodes.indexOf(node.left),
+        right: node.isLeaf ? -1 : nodes.indexOf(node.right),
+        triangleIndex: node.isLeaf ? node.triangleIndex : -1,
+      });
+    }
+
+    return flatNodes;
   }
 
   public render(commandEncoder: GPUCommandEncoder) {
