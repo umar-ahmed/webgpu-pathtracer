@@ -496,7 +496,11 @@ export class RaytracePass extends Pass {
     // Mark scene as updated
     scene.needsUpdate = false;
 
-    console.log(nodes);
+    console.table({
+      Triangles: triangles.length,
+      Materials: materials.length,
+      "BVH Nodes": nodes.length,
+    });
   }
 
   /**
