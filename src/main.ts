@@ -216,7 +216,7 @@ sceneFolder
     renderer.reset();
   });
 
-const cameraFolder = pane.addFolder({ title: "Camera" });
+const cameraFolder = pane.addFolder({ title: "Camera", expanded: false });
 
 cameraFolder
   .addBinding(camera, "position")
@@ -242,7 +242,10 @@ cameraFolder
   .addBinding(camera, "aperture", { min: 0.0, max: 0.5 })
   .on("change", () => renderer.reset());
 
-const postprocessingFolder = pane.addFolder({ title: "Post-processing" });
+const postprocessingFolder = pane.addFolder({
+  title: "Post-processing",
+  expanded: false,
+});
 
 postprocessingFolder.addBinding(PARAMS, "denoise").on("change", ({ value }) => {
   renderer.setUniforms("fullscreen", { denoise: value ? 1 : 0 });
