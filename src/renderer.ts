@@ -4,7 +4,7 @@ import { FullscreenPass } from "./passes/fullscreen";
 import { RaytracePass } from "./passes/raytrace";
 import noiseBase64 from "./assets/noise";
 import { clamp } from "./utils";
-import { RaytracingCamera } from "./scene";
+import { RaytracingCamera, RaytracingScene } from "./scene";
 
 type RendererEventMap = {
   start: () => void;
@@ -175,8 +175,12 @@ export class Renderer {
     this.passes[pass].setUniforms(value);
   }
 
-  render(scene: THREE.Scene, camera: RaytracingCamera) {
+  update(scene: RaytracingScene, camera: RaytracingCamera) {
     this.passes.raytrace.updateScene(scene, camera);
+  }
+
+  render(scene: RaytracingScene, camera: RaytracingCamera) {
+    this.update(scene, camera);
 
     if (this.status === "sampling" && this.hasFramesToSample) {
       this.frame++;

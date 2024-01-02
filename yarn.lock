@@ -1277,6 +1277,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tweakpane-plugin-file-import@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "tweakpane-plugin-file-import@npm:1.0.1"
+  peerDependencies:
+    tweakpane: ^4.0.0
+  checksum: aba32bbeff9a92e7c1610286cf3faf712cf68831e5b04ea660a65c9b49f1be4b86a788bb4bb1434eb3d9d91dbad3c80a92c8c8e1ea39c4d2d77ded77ce28eb8f
+  languageName: node
+  linkType: hard
+
 "tweakpane@npm:^4.0.3":
   version: 4.0.3
   resolution: "tweakpane@npm:4.0.3"
@@ -1319,6 +1328,13 @@ __metadata:
   dependencies:
     imurmurhash: "npm:^0.1.4"
   checksum: cb811d9d54eb5821b81b18205750be84cb015c20a4a44280794e915f5a0a70223ce39066781a354e872df3572e8155c228f43ff0cce94c7cbf4da2cc7cbdd635
+  languageName: node
+  linkType: hard
+
+"vite-raw-plugin@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "vite-raw-plugin@npm:1.0.2"
+  checksum: ce39694dac94b2fcd0e9b4508b4297d7f05b8b1e60716d68bbe31b1a1396d6f6f9fcde716c9bdb8a8471a27a99e2f2a3adfa89460bb765d00fd71672ccc93a10
   languageName: node
   linkType: hard
 
@@ -1375,8 +1391,10 @@ __metadata:
     nprogress: "npm:^0.2.0"
     three: "npm:^0.160.0"
     tweakpane: "npm:^4.0.3"
+    tweakpane-plugin-file-import: "npm:^1.0.1"
     typescript: "npm:^5.2.2"
     vite: "npm:^5.0.8"
+    vite-raw-plugin: "npm:^1.0.2"
     webgpu-utils: "npm:^1.0.2"
   languageName: unknown
   linkType: soft

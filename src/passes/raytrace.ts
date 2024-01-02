@@ -1,4 +1,4 @@
-import computeShaderCode from "./shaders/raytrace.wgsl?raw";
+import computeShaderCode from "./shaders/raytrace.wgsl";
 import { Renderer } from "../renderer";
 import {
   StructuredView,

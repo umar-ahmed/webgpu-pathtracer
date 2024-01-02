@@ -1,12 +1,15 @@
 import { Pane } from "tweakpane";
 import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 import * as CamerakitPlugin from "@tweakpane/plugin-camerakit";
+import * as FileImportPlugin from "tweakpane-plugin-file-import";
 import NProgress from "nprogress";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/Addons.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { Renderer } from "./renderer";
 import { RaytracingCamera, RaytracingMaterial, RaytracingScene } from "./scene";
+import { DRACOLoader } from "three/examples/jsm/Addons.js";
 
 // Check for WebGPU support
 const diagnostic = await Renderer.diagnostic();
@@ -60,11 +63,13 @@ scene.needsUpdate = true;
 const pane = new Pane({ title: "Parameters" });
 pane.registerPlugin(EssentialsPlugin);
 pane.registerPlugin(CamerakitPlugin);
+pane.registerPlugin(FileImportPlugin);
 
 const PARAMS = {
   maxBounces: 4,
   denoise: true,
   tonemapping: 1,
+  file: "",
 };
 
 const fpsGraph = pane.addBlade({
@@ -161,6 +166,53 @@ pane
   .on("change", ({ last }) => {
     if (!last) return;
     renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
+    renderer.reset();
+  });
+
+const sceneFolder = pane.addFolder({ title: "Scene" });
+
+sceneFolder
+  .addBinding(PARAMS, "file", {
+    view: "file-input",
+    lineCount: 2,
+    filetypes: [".glb", ".gltf"],
+  })
+  .on("change", async (ev) => {
+    const file = ev.value as unknown as File | null;
+    if (file instanceof File) {
+      const loader = new GLTFLoader();
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath("/static/draco/");
+      loader.setDRACOLoader(dracoLoader);
+      const gltf = await loader.loadAsync(URL.createObjectURL(file), (e) => {
+        const progress = e.loaded / e.total;
+        console.log(`Loading model: ${Math.round(progress * 100)}%`);
+      });
+
+      const model = gltf.scene;
+      model.position.x = 0;
+      model.position.y = 0.5;
+      model.position.z = 0;
+      const bounds = new THREE.Box3().setFromObject(model);
+      const scale = 1 / Math.max(bounds.max.x, bounds.max.y, bounds.max.z);
+      model.scale.set(scale, scale, scale);
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.material = red;
+        }
+      });
+      scene.clear();
+      scene.add(model);
+    } else {
+      scene.clear();
+      scene.add(plane);
+      scene.add(box);
+      scene.add(sphere);
+    }
+
+    scene.needsUpdate = true;
+
+    renderer.update(scene, camera);
     renderer.reset();
   });
 

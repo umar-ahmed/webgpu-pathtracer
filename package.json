@@ -16,6 +16,8 @@
     "nprogress": "^0.2.0",
     "three": "^0.160.0",
     "tweakpane": "^4.0.3",
+    "tweakpane-plugin-file-import": "^1.0.1",
+    "vite-raw-plugin": "^1.0.2",
     "webgpu-utils": "^1.0.2"
   },
   "devDependencies": {

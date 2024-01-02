@@ -4,7 +4,7 @@ import {
   makeStructuredView,
 } from "webgpu-utils";
 import { Renderer } from "../renderer";
-import fullscreenCode from "./shaders/fullscreen.wgsl?raw";
+import fullscreenCode from "./shaders/fullscreen.wgsl";
 import { Pass } from "./pass";
 
 export class FullscreenPass extends Pass {
