@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
 
 import { Renderer } from "./renderer";
-import { RaytracingCamera, RaytracingMaterial } from "./scene";
+import { RaytracingCamera, RaytracingMaterial, RaytracingScene } from "./scene";
 
 // Check for WebGPU support
 const diagnostic = await Renderer.diagnostic();
@@ -23,7 +23,7 @@ const renderer = await Renderer.create();
 document.body.appendChild(renderer.canvas);
 
 // Setup Scene
-const scene = new THREE.Scene();
+const scene = new RaytracingScene();
 
 const camera = new RaytracingCamera(45);
 camera.position.copy(new THREE.Vector3(0, 1, 4));
@@ -53,6 +53,8 @@ const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 8), white);
 sphere.position.y = 0.5;
 sphere.position.z = -0.5;
 scene.add(sphere);
+
+scene.needsUpdate = true;
 
 // Setup Tweakpane
 const pane = new Pane({ title: "Parameters" });
