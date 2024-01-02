@@ -22,9 +22,9 @@
 - [x] 🌫️ Denoising
 - [x] 📸 Camera controls
 - [x] 🔺 Triangle meshes
+- [x] 📦 Bounding volume hierarchies (BVH)
 - [ ] 🪙 PBR materials
 - [ ] 🗺️ Environment maps
-- [ ] 📦 Bounding volume hierarchies (BVH)
 - [ ] 🤹 Multiple importance sampling (MIS)
 
 ## Getting Started
