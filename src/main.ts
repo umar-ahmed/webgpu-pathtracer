@@ -70,6 +70,12 @@ const PARAMS = {
   denoise: true,
   tonemapping: 1,
   file: "",
+  sunIntensity: 1.0,
+  sunFocus: 1.0,
+  sunDirection: new THREE.Vector3(0.4, 0.4, -0.4),
+  groundColor: new THREE.Color(51, 51, 51),
+  skyColorZenith: new THREE.Color(127, 180, 255),
+  skyColorHorizon: new THREE.Color(26, 32, 180),
 };
 
 const fpsGraph = pane.addBlade({
@@ -172,6 +178,54 @@ pane
 const sceneFolder = pane.addFolder({ title: "Scene" });
 
 sceneFolder
+  .addBinding(PARAMS, "sunIntensity", { min: 0, max: 20 })
+  .on("change", () => {
+    renderer.setUniforms("raytrace", { sunIntensity: PARAMS.sunIntensity });
+    renderer.reset();
+  });
+
+sceneFolder
+  .addBinding(PARAMS, "sunFocus", { min: 1, max: 10 })
+  .on("change", () => {
+    renderer.setUniforms("raytrace", { sunFocus: PARAMS.sunFocus });
+    renderer.reset();
+  });
+
+sceneFolder
+  .addBinding(PARAMS, "sunDirection", {
+    min: -1,
+    max: 1,
+    step: 0.1,
+  })
+  .on("change", () => {
+    renderer.setUniforms("raytrace", {
+      sunDirection: PARAMS.sunDirection.toArray(),
+    });
+    renderer.reset();
+  });
+
+sceneFolder.addBinding(PARAMS, "groundColor").on("change", () => {
+  renderer.setUniforms("raytrace", {
+    groundColor: PARAMS.groundColor.toArray().map((x) => x / 255),
+  });
+  renderer.reset();
+});
+
+sceneFolder.addBinding(PARAMS, "skyColorZenith").on("change", () => {
+  renderer.setUniforms("raytrace", {
+    skyColorZenith: PARAMS.skyColorZenith.toArray().map((x) => x / 255),
+  });
+  renderer.reset();
+});
+
+sceneFolder.addBinding(PARAMS, "skyColorHorizon").on("change", () => {
+  renderer.setUniforms("raytrace", {
+    skyColorHorizon: PARAMS.skyColorHorizon.toArray().map((x) => x / 255),
+  });
+  renderer.reset();
+});
+
+sceneFolder
   .addBinding(PARAMS, "file", {
     view: "file-input",
     lineCount: 2,
@@ -198,7 +252,7 @@ sceneFolder
       model.scale.set(scale, scale, scale);
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
-          child.material = red;
+          child.material = white;
         }
       });
       scene.clear();
@@ -288,6 +342,12 @@ orbitControls.update();
 // Set initial uniforms based on PARAMS
 renderer.setUniforms("raytrace", {
   maxBounces: PARAMS.maxBounces,
+  sunIntensity: PARAMS.sunIntensity,
+  sunFocus: PARAMS.sunFocus,
+  sunDirection: PARAMS.sunDirection.toArray(),
+  groundColor: PARAMS.groundColor.toArray().map((x) => x / 255),
+  skyColorZenith: PARAMS.skyColorZenith.toArray().map((x) => x / 255),
+  skyColorHorizon: PARAMS.skyColorHorizon.toArray().map((x) => x / 255),
 });
 renderer.setUniforms("fullscreen", {
   denoise: PARAMS.denoise ? 1 : 0,

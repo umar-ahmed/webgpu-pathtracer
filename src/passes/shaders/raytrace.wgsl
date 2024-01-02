@@ -70,6 +70,13 @@ struct Uniforms {
   maxBounces: i32,
   samplesPerFrame: i32,
   camera: Camera,
+  skyColor: f32,
+  sunIntensity: f32,
+  sunFocus: f32,
+  sunDirection: vec3f,
+  skyColorZenith: vec3f,
+  skyColorHorizon: vec3f,
+  groundColor: vec3f,
 };
 
 // Moller-Trumbore algorithm
@@ -273,20 +280,14 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
-      let sunFocus = 50.0;
-      let sunIntensity = 40.0;
-      let sunLightDirection = normalize(vec3f(0.4, 0.4, -0.4));
-      let skyColorZenith = vec3f(0.5, 0.7, 1.0);
-      let skyColorHorizon = vec3f(0.1, 0.2, 0.7);
-      let groundColor = vec3f(0.2, 0.2, 0.2);
-
+      let sunLightDirection = normalize(uniforms.sunDirection);
       let skyGradientT = pow(smoothstep(0.0, 0.4, traceRay.direction.y), 0.35);
-      let skyGradient = mix(skyColorHorizon, skyColorZenith, skyGradientT);
-      let sun = pow(max(0, dot(traceRay.direction, sunLightDirection)), sunFocus) * sunIntensity;
+      let skyGradient = mix(uniforms.skyColorHorizon, uniforms.skyColorZenith, skyGradientT);
+      let sun = pow(max(0, dot(traceRay.direction, sunLightDirection)), uniforms.sunFocus) * uniforms.sunIntensity;
       let groundToSkyT = smoothstep(-0.01, 0, traceRay.direction.y);
       let sunMask = select(0.0, 1.0, groundToSkyT >= 1.0);
       
-      incomingLight += rayColor * (mix(groundColor, skyGradient, groundToSkyT) + sun * sunMask);
+      incomingLight += rayColor * (mix(uniforms.groundColor, skyGradient, groundToSkyT) + sun * sunMask);
       
       break;
     }
@@ -326,8 +327,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
     // Depth of field + Anti-aliasing
     let jitter = vec3f(randPointInCircle(&seed) * (1.0 / uniforms.resolution), 0.0);
-    let fovAdjustedAperture = uniforms.camera.aperture / tan(degToRad(uniforms.camera.fov) * 0.5);
-    let jitter2 = vec3f(randPointInCircle(&seed) * fovAdjustedAperture, 0.0);
+    let jitter2 = vec3f(randPointInCircle(&seed) * uniforms.camera.aperture, 0.0);
     let focalPoint = ray.origin + ray.direction * uniforms.camera.focalDistance + jitter;
     ray.origin += jitter2;
     ray.direction = normalize(focalPoint - ray.origin);
