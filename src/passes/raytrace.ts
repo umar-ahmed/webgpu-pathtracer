@@ -570,10 +570,52 @@ export class RaytracePass extends Pass {
         return centerA - centerB;
       });
 
-      // Split input nodes into two halves
-      const half = Math.ceil(inputNodes.length / 2);
-      const leftNodes = inputNodes.slice(0, half);
-      const rightNodes = inputNodes.slice(half);
+      // Calculate the cost of splitting at each possible position
+      let minCost = Infinity;
+      let minIndex = -1;
+
+      function computeBBox(nodes: BVHNode[]) {
+        const bbox = new THREE.Box3();
+        for (const node of nodes) {
+          bbox.expandByPoint(node.bbox.min);
+          bbox.expandByPoint(node.bbox.max);
+        }
+        return bbox;
+      }
+
+      function getSurfaceArea(box: THREE.Box3): number {
+        const size = new THREE.Vector3();
+        box.getSize(size);
+
+        const x = size.x;
+        const y = size.y;
+        const z = size.z;
+
+        return 2 * (x * y + x * z + y * z);
+      }
+
+      for (let i = 1; i < inputNodes.length; i++) {
+        const leftNodes = inputNodes.slice(0, i);
+        const rightNodes = inputNodes.slice(i);
+
+        const leftBBox = computeBBox(leftNodes);
+        const rightBBox = computeBBox(rightNodes);
+
+        const leftArea = getSurfaceArea(leftBBox);
+        const rightArea = getSurfaceArea(rightBBox);
+
+        const cost =
+          leftArea * leftNodes.length + rightArea * rightNodes.length;
+
+        if (cost < minCost) {
+          minCost = cost;
+          minIndex = i;
+        }
+      }
+
+      // Split input nodes base on the minimum cost
+      const leftNodes = inputNodes.slice(0, minIndex);
+      const rightNodes = inputNodes.slice(minIndex);
 
       // Recursively build BVH tree for the two halves
       node.left = this.buildBVHRecursive(leftNodes);
