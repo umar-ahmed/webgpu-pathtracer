@@ -134,21 +134,22 @@ fn rayAABBIntersect(ray: Ray, aabbMin: vec3f, aabbMax: vec3f) -> bool {
   return tmax >= max(0.0, tmin);
 }
 
-fn rayBVHIntersect(ray: Ray, bvh: BVHNode) -> Hit {
+fn rayBVHIntersect(ray: Ray, bvhIndex: i32) -> Hit {
   var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, -1);
 
-  if (!rayAABBIntersect(ray, bvh.min, bvh.max)) {
+  if (!rayAABBIntersect(ray, bvhBuffer[bvhIndex].min, bvhBuffer[bvhIndex].max)) {
     return hit;
   }
 
-  var stack: array<BVHNode, MAX_STACK_SIZE>;
+  var stack: array<i32, MAX_STACK_SIZE>;
   var stackSize: i32 = 0;
-  stack[stackSize] = bvh;
+  stack[stackSize] = bvhIndex;
   stackSize++;
 
   while (stackSize > 0 && stackSize < MAX_STACK_SIZE) {
     stackSize--;
-    var currentNode = stack[stackSize];
+    let currentNodeIndex = stack[stackSize];
+    let currentNode = bvhBuffer[currentNodeIndex];
 
     if (currentNode.isLeaf == 1) {
       let triangle = triangleBuffer[currentNode.triangleIndex];
@@ -160,7 +161,7 @@ fn rayBVHIntersect(ray: Ray, bvh: BVHNode) -> Hit {
       if (currentNode.left >= 0) {
         let leftNode = bvhBuffer[currentNode.left];
         if (rayAABBIntersect(ray, leftNode.min, leftNode.max)) {
-          stack[stackSize] = leftNode;
+          stack[stackSize] = currentNode.left;
           stackSize++;
         }
       }
@@ -168,7 +169,7 @@ fn rayBVHIntersect(ray: Ray, bvh: BVHNode) -> Hit {
       if (currentNode.right >= 0) {
         let rightNode = bvhBuffer[currentNode.right];
         if (rayAABBIntersect(ray, rightNode.min, rightNode.max)) {
-          stack[stackSize] = rightNode;
+          stack[stackSize] = currentNode.right;
           stackSize++;
         }
       }
@@ -182,7 +183,7 @@ fn raySceneIntersect(ray: Ray) -> Hit {
   if (arrayLength(&bvhBuffer) == 0) {
     return Hit(false, vec3f(0.0), vec3f(0.0), INF, -1);
   } else {
-    return rayBVHIntersect(ray, bvhBuffer[0]);
+    return rayBVHIntersect(ray, 0);
   }
 }
 
