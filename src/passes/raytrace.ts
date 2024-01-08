@@ -14,9 +14,9 @@ import {
 } from "../scene";
 
 type Triangle = {
-  a: THREE.Vector3;
-  b: THREE.Vector3;
-  c: THREE.Vector3;
+  aPosition: THREE.Vector3;
+  bPosition: THREE.Vector3;
+  cPosition: THREE.Vector3;
   aNormal: THREE.Vector3;
   bNormal: THREE.Vector3;
   cNormal: THREE.Vector3;
@@ -104,9 +104,9 @@ export class RaytracePass extends Pass {
   private updateTriangleBuffer(triangles: Triangle[]) {
     for (let i = 0; i < triangles.length; i++) {
       const t = triangles[i];
-      this.triangleStructuredView.views[i].a.set(t.a.toArray());
-      this.triangleStructuredView.views[i].b.set(t.b.toArray());
-      this.triangleStructuredView.views[i].c.set(t.c.toArray());
+      this.triangleStructuredView.views[i].aPosition.set(t.aPosition.toArray());
+      this.triangleStructuredView.views[i].bPosition.set(t.bPosition.toArray());
+      this.triangleStructuredView.views[i].cPosition.set(t.cPosition.toArray());
       this.triangleStructuredView.views[i].aNormal.set(t.aNormal.toArray());
       this.triangleStructuredView.views[i].bNormal.set(t.bNormal.toArray());
       this.triangleStructuredView.views[i].cNormal.set(t.cNormal.toArray());
@@ -458,9 +458,9 @@ export class RaytracePass extends Pass {
           }
 
           triangles.push({
-            a: aPosition,
-            b: bPosition,
-            c: cPosition,
+            aPosition: aPosition,
+            bPosition: bPosition,
+            cPosition: cPosition,
             aNormal,
             bNormal,
             cNormal,
@@ -514,7 +514,11 @@ export class RaytracePass extends Pass {
     // Create node for each triangle
     for (let i = 0; i < triangles.length; i++) {
       const t = triangles[i];
-      const bbox = new THREE.Box3().setFromPoints([t.a, t.b, t.c]);
+      const bbox = new THREE.Box3().setFromPoints([
+        t.aPosition,
+        t.bPosition,
+        t.cPosition,
+      ]);
       inputNodes.push({
         bbox,
         isLeaf: true,

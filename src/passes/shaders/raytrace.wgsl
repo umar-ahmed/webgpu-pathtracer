@@ -38,9 +38,9 @@ struct Material {
 };
 
 struct Triangle {
-  a: vec3f,
-  b: vec3f,
-  c: vec3f,
+  aPosition: vec3f,
+  bPosition: vec3f,
+  cPosition: vec3f,
   aNormal: vec3f,
   bNormal: vec3f,
   cNormal: vec3f,
@@ -83,8 +83,8 @@ struct Uniforms {
 fn rayTriangleIntersect(ray: Ray, triangle: Triangle) -> Hit {
   var hit = Hit(false, vec3f(0.0), vec3f(0.0), INF, triangle.materialIndex);
 
-  let edge1 = triangle.b - triangle.a;
-  let edge2 = triangle.c - triangle.a;
+  let edge1 = triangle.bPosition - triangle.aPosition;
+  let edge2 = triangle.cPosition - triangle.aPosition;
   let h = cross(ray.direction, edge2);
   let a = dot(edge1, h);
 
@@ -93,7 +93,7 @@ fn rayTriangleIntersect(ray: Ray, triangle: Triangle) -> Hit {
   }
 
   let f = 1.0 / a;
-  let s = ray.origin - triangle.a;
+  let s = ray.origin - triangle.aPosition;
   let u = f * dot(s, h);
 
   if (u < 0.0 || u > 1.0) {
