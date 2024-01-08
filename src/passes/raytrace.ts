@@ -643,7 +643,6 @@ export class RaytracePass extends Pass {
       const node = queue.shift()!;
       nodes.push(node);
       if (!node.isLeaf) {
-        nodes.push(node);
         queue.push(node.left);
         queue.push(node.right);
       }
