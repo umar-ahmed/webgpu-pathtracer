@@ -33,7 +33,7 @@ export class Renderer {
 
   private _scalingFactor: number = 0.25;
   public frames: number = 64;
-  public samplesPerFrame: number = 2;
+  public samplesPerFrame: number = 1;
   public status: "idle" | "sampling" | "paused" = "idle";
   public options: {
     readonly enableTimestampQuery: boolean;
