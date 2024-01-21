@@ -17,10 +17,9 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   
   let color =  textureLoad(inputTexture, globalId.xy, 0).rgb;
   let prevColor = textureLoad(outputTexturePrev, globalId.xy, 0).rgb;
+
   var weight = 1.0 / f32(uniforms.frame);
-  if (uniforms.enabled == 0) {
-    weight = 1.0;
-  }
+  weight = select(1.0, weight, uniforms.enabled == 1u);
   let newColor = mix(prevColor, color, weight);
 
   textureStore(outputTexture, globalId.xy, vec4f(newColor, 1.0));
