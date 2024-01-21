@@ -70,13 +70,7 @@ struct Uniforms {
   maxBounces: i32,
   samplesPerFrame: i32,
   camera: Camera,
-  skyColor: f32,
-  sunIntensity: f32,
-  sunFocus: f32,
-  sunDirection: vec3f,
-  skyColorZenith: vec3f,
-  skyColorHorizon: vec3f,
-  groundColor: vec3f,
+  envMapIntensity: f32,
 };
 
 // Moller-Trumbore algorithm
@@ -284,7 +278,7 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       // Sample the environment texture
       let uv = vec2f(atan2(traceRay.direction.z, traceRay.direction.x) * INVTWOPI + 0.5, acos(traceRay.direction.y) * INVPI);
       let texel = textureSampleLevel(environmentTexture, environmentSampler, uv, 0.0);
-      incomingLight += rayColor * vec3f(texel.rgb);
+      incomingLight += rayColor * vec3f(texel.rgb) * uniforms.envMapIntensity;
       
       break;
     }
