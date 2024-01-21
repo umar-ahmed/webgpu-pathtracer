@@ -1,7 +1,7 @@
 import { AccumulatePass } from "./passes/accumulate";
 import { FullscreenPass } from "./passes/fullscreen";
 import { RaytracePass } from "./passes/raytrace";
-import noiseBase64 from "./assets/noise";
+// import noiseBase64 from "./assets/noise";
 import { clamp } from "./utils";
 import { RaytracingCamera, RaytracingScene } from "./scene";
 
@@ -361,31 +361,31 @@ export class Renderer {
     }
   }
 
-  private static async loadNoiseTexture(device: GPUDevice) {
-    const image = new Image();
-    image.src = noiseBase64;
-    await image.decode();
+  // private static async loadNoiseTexture(device: GPUDevice) {
+  //   const image = new Image();
+  //   image.src = noiseBase64;
+  //   await image.decode();
 
-    const source = await createImageBitmap(image);
+  //   const source = await createImageBitmap(image);
 
-    const texture = device.createTexture({
-      label: "Noise Texture",
-      format: "rgba8unorm",
-      size: [source.width, source.height],
-      usage:
-        GPUTextureUsage.TEXTURE_BINDING |
-        GPUTextureUsage.COPY_DST |
-        GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+  //   const texture = device.createTexture({
+  //     label: "Noise Texture",
+  //     format: "rgba8unorm",
+  //     size: [source.width, source.height],
+  //     usage:
+  //       GPUTextureUsage.TEXTURE_BINDING |
+  //       GPUTextureUsage.COPY_DST |
+  //       GPUTextureUsage.RENDER_ATTACHMENT,
+  //   });
 
-    device.queue.copyExternalImageToTexture(
-      { source, flipY: true },
-      { texture },
-      { width: source.width, height: source.height }
-    );
+  //   device.queue.copyExternalImageToTexture(
+  //     { source, flipY: true },
+  //     { texture },
+  //     { width: source.width, height: source.height }
+  //   );
 
-    await device.queue.onSubmittedWorkDone();
+  //   await device.queue.onSubmittedWorkDone();
 
-    return texture;
-  }
+  //   return texture;
+  // }
 }
