@@ -68,6 +68,7 @@ pane.registerPlugin(FileImportPlugin);
 const PARAMS = {
   maxBounces: 4,
   denoise: true,
+  accumulate: true,
   tonemapping: 1,
   file: "",
   sunIntensity: 1.0,
@@ -85,6 +86,17 @@ const fpsGraph = pane.addBlade({
 
 pane.addBinding(renderer.timings.raytrace, "value", {
   label: "raytrace",
+  readonly: true,
+  format: (value) =>
+    value.toLocaleString(undefined, {
+      style: "unit",
+      unit: "microsecond",
+      unitDisplay: "short",
+    }),
+});
+
+pane.addBinding(renderer.timings.accumulate, "value", {
+  label: "accumulate",
   readonly: true,
   format: (value) =>
     value.toLocaleString(undefined, {
@@ -174,6 +186,11 @@ pane
     renderer.setUniforms("raytrace", { maxBounces: PARAMS.maxBounces });
     renderer.reset();
   });
+
+pane.addBinding(PARAMS, "accumulate").on("change", ({ value }) => {
+  renderer.setUniforms("accumulate", { enabled: value ? 1 : 0 });
+  renderer.reset();
+});
 
 const sceneFolder = pane.addFolder({ title: "Scene" });
 
@@ -348,6 +365,9 @@ renderer.setUniforms("raytrace", {
   groundColor: PARAMS.groundColor.toArray().map((x) => x / 255),
   skyColorZenith: PARAMS.skyColorZenith.toArray().map((x) => x / 255),
   skyColorHorizon: PARAMS.skyColorHorizon.toArray().map((x) => x / 255),
+});
+renderer.setUniforms("accumulate", {
+  enabled: PARAMS.accumulate ? 1 : 0,
 });
 renderer.setUniforms("fullscreen", {
   denoise: PARAMS.denoise ? 1 : 0,

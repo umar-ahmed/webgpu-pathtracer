@@ -1,3 +1,4 @@
+import { AccumulatePass } from "./passes/accumulate";
 import { FullscreenPass } from "./passes/fullscreen";
 import { RaytracePass } from "./passes/raytrace";
 import noiseBase64 from "./assets/noise";
@@ -20,6 +21,7 @@ export class Renderer {
   private _frame: number = 1;
   private passes: {
     raytrace: RaytracePass;
+    accumulate: AccumulatePass;
     fullscreen: FullscreenPass;
   };
   private listeners: Map<RendererEventType, any[]> = new Map();
@@ -28,7 +30,6 @@ export class Renderer {
   public device: GPUDevice;
   public format: GPUTextureFormat = "bgra8unorm";
   public outputTexture: GPUTexture;
-  public outputTexturePrev: GPUTexture;
   public noiseTexture: GPUTexture;
 
   private _scalingFactor: number = 0.25;
@@ -70,11 +71,11 @@ export class Renderer {
     this.context.configure({ device, format });
 
     this.outputTexture = this.createStorageTexture();
-    this.outputTexturePrev = this.createStorageTexture();
     this.noiseTexture = noiseTexture;
 
     this.passes = {
       raytrace: new RaytracePass(this),
+      accumulate: new AccumulatePass(this),
       fullscreen: new FullscreenPass(this),
     };
   }
@@ -165,6 +166,7 @@ export class Renderer {
   get timings() {
     return {
       raytrace: this.passes.raytrace.timingAverage,
+      accumulate: this.passes.accumulate.timingAverage,
       fullscreen: this.passes.fullscreen.timingAverage,
     };
   }
@@ -180,28 +182,31 @@ export class Renderer {
   render(scene: RaytracingScene, camera: RaytracingCamera) {
     this.update(scene, camera);
 
-    if (this.status === "sampling" && this.hasFramesToSample) {
+    const shouldSample = this.status === "sampling" && this.hasFramesToSample;
+
+    if (shouldSample) {
       this.frame++;
     }
 
     this.passes.raytrace.update();
+    this.passes.accumulate.update();
     this.passes.fullscreen.update();
 
     const commandEncoder = this.device.createCommandEncoder();
 
-    if (this.status === "sampling" && this.hasFramesToSample) {
+    if (shouldSample) {
       this.passes.raytrace.render(commandEncoder);
       this.emit("progress", this.progress);
     }
 
+    if (shouldSample) this.passes.accumulate.render(commandEncoder);
     this.passes.fullscreen.render(commandEncoder);
 
     const commandBuffer = commandEncoder.finish();
     this.device.queue.submit([commandBuffer]);
 
-    if (this.status === "sampling" && this.hasFramesToSample) {
-      this.passes.raytrace.updateTimings();
-    }
+    if (shouldSample) this.passes.raytrace.updateTimings();
+    if (shouldSample) this.passes.accumulate.updateTimings();
     this.passes.fullscreen.updateTimings();
   }
 
@@ -213,7 +218,6 @@ export class Renderer {
 
     // Re-create the storage texture with the new size
     this.outputTexture = this.createStorageTexture();
-    this.outputTexturePrev = this.createStorageTexture();
 
     // Emit the reset event
     this.emit("reset");

@@ -253,15 +253,6 @@ export class RaytracePass extends Pass {
             format: "rgba16float",
           },
         },
-        {
-          binding: 6,
-          visibility: GPUShaderStage.COMPUTE,
-          texture: {
-            viewDimension: "2d",
-            sampleType: "float",
-            multisampled: false,
-          },
-        },
       ],
     });
   }
@@ -306,10 +297,6 @@ export class RaytracePass extends Pass {
         {
           binding: 5,
           resource: this.renderer.outputTexture.createView(),
-        },
-        {
-          binding: 6,
-          resource: this.renderer.outputTexturePrev.createView(),
         },
       ],
     });
@@ -676,11 +663,5 @@ export class RaytracePass extends Pass {
     computePassEncoder.setBindGroup(0, this.bindGroup);
     computePassEncoder.dispatchWorkgroups(workgroupsX, workgroupsY, 1);
     computePassEncoder.end();
-
-    commandEncoder.copyTextureToTexture(
-      { texture: this.renderer.outputTexture, mipLevel: 0 },
-      { texture: this.renderer.outputTexturePrev },
-      [this.renderer.width, this.renderer.height, 1]
-    );
   }
 }

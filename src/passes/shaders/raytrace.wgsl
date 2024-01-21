@@ -303,7 +303,6 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
 @group(0) @binding(3) var<uniform> uniforms: Uniforms;
 @group(0) @binding(4) var blueNoiseTexture: texture_2d<f32>;
 @group(0) @binding(5) var outputTexture: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(6) var outputTexturePrev: texture_2d<f32>;
 
 @compute @workgroup_size(8, 8)
 fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
@@ -354,11 +353,6 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // color = vec3f(randNormal(&seed));
   // color = randDirection(&seed);
   // color = randHemisphere(&seed, vec3f(0.0, 1.0, 0.0));
-
-  // Temporal accumulation
-  let prevColor = textureLoad(outputTexturePrev, globalId.xy, 0).rgb;
-  let weight = 1.0 / f32(uniforms.frame);
-  color = mix(prevColor, color, weight);
 
   textureStore(outputTexture, globalId.xy, vec4f(color, 1.0));
 }
