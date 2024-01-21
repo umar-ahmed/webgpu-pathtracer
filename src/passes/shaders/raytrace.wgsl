@@ -71,6 +71,7 @@ struct Uniforms {
   samplesPerFrame: i32,
   camera: Camera,
   envMapIntensity: f32,
+  envMapRotation: f32,
 };
 
 // Moller-Trumbore algorithm
@@ -275,8 +276,13 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
+      
+      // Calculate UV coordinates from the ray direction + envMapRotation
+      var uv = vec2f(atan2(traceRay.direction.x, traceRay.direction.z) * INVTWOPI + 0.5, -1.0 * asin(traceRay.direction.y) * INVPI + 0.5);
+      uv += vec2f(uniforms.envMapRotation / TWOPI, 0.0);
+      uv = fract(uv);
+      
       // Sample the environment texture
-      let uv = vec2f(atan2(traceRay.direction.z, traceRay.direction.x) * INVTWOPI + 0.5, acos(traceRay.direction.y) * INVPI);
       let texel = textureSampleLevel(environmentTexture, environmentSampler, uv, 0.0);
       incomingLight += rayColor * vec3f(texel.rgb) * uniforms.envMapIntensity;
       

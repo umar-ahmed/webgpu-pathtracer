@@ -84,6 +84,7 @@ const PARAMS = {
   tonemapping: 1,
   envMap: ENVMAPS[0],
   envMapIntensity: 1.0,
+  envMapRotation: 0.0,
   file: "",
 };
 
@@ -221,6 +222,20 @@ sceneFolder
   .on("change", () => {
     renderer.setUniforms("raytrace", {
       envMapIntensity: PARAMS.envMapIntensity,
+    });
+    renderer.reset();
+  });
+
+sceneFolder
+  .addBinding(PARAMS, "envMapRotation", {
+    min: -180.0,
+    max: 180.0,
+    step: 0.01,
+    format: (x) => `${x}°`,
+  })
+  .on("change", () => {
+    renderer.setUniforms("raytrace", {
+      envMapRotation: PARAMS.envMapRotation * (Math.PI / 180),
     });
     renderer.reset();
   });
