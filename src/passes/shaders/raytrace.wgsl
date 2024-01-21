@@ -281,14 +281,10 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
-      let sunLightDirection = normalize(uniforms.sunDirection);
-      let skyGradientT = pow(smoothstep(0.0, 0.4, traceRay.direction.y), 0.35);
-      let skyGradient = mix(uniforms.skyColorHorizon, uniforms.skyColorZenith, skyGradientT);
-      let sun = pow(max(0, dot(traceRay.direction, sunLightDirection)), uniforms.sunFocus) * uniforms.sunIntensity;
-      let groundToSkyT = smoothstep(-0.01, 0, traceRay.direction.y);
-      let sunMask = select(0.0, 1.0, groundToSkyT >= 1.0);
-      
-      incomingLight += rayColor * (mix(uniforms.groundColor, skyGradient, groundToSkyT) + sun * sunMask);
+      // Sample the environment texture
+      let uv = vec2f(atan2(traceRay.direction.z, traceRay.direction.x) * INVTWOPI + 0.5, acos(traceRay.direction.y) * INVPI);
+      let texel = textureSampleLevel(environmentTexture, environmentSampler, uv, 0.0);
+      incomingLight += rayColor * vec3f(texel.rgb);
       
       break;
     }
@@ -301,8 +297,9 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
 @group(0) @binding(1) var<storage, read> materialBuffer: array<Material>;
 @group(0) @binding(2) var<storage, read> bvhBuffer: array<BVHNode>;
 @group(0) @binding(3) var<uniform> uniforms: Uniforms;
-// @group(0) @binding(4) var blueNoiseTexture: texture_2d<f32>;
-@group(0) @binding(5) var outputTexture: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(4) var environmentTexture: texture_2d<f32>;
+@group(0) @binding(5) var environmentSampler: sampler;
+@group(0) @binding(6) var outputTexture: texture_storage_2d<rgba16float, write>;
 
 @compute @workgroup_size(8, 8)
 fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {

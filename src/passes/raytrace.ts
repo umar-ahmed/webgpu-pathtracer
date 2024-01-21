@@ -236,17 +236,24 @@ export class RaytracePass extends Pass {
             type: "uniform",
           },
         },
-        // {
-        //   binding: 4,
-        //   visibility: GPUShaderStage.COMPUTE,
-        //   texture: {
-        //     viewDimension: "2d",
-        //     sampleType: "float",
-        //     multisampled: false,
-        //   },
-        // },
+        {
+          binding: 4,
+          visibility: GPUShaderStage.COMPUTE,
+          texture: {
+            viewDimension: "2d",
+            sampleType: "float",
+            multisampled: false,
+          },
+        },
         {
           binding: 5,
+          visibility: GPUShaderStage.COMPUTE,
+          sampler: {
+            type: "filtering",
+          },
+        },
+        {
+          binding: 6,
           visibility: GPUShaderStage.COMPUTE,
           storageTexture: {
             access: "write-only",
@@ -290,12 +297,16 @@ export class RaytracePass extends Pass {
             buffer: this.uniformsBuffer,
           },
         },
-        // {
-        //   binding: 4,
-        //   resource: this.renderer.noiseTexture.createView(),
-        // },
+        {
+          binding: 4,
+          resource: this.renderer.environmentTexture.createView(),
+        },
         {
           binding: 5,
+          resource: this.renderer.environmentSampler,
+        },
+        {
+          binding: 6,
           resource: this.renderer.outputTexture.createView(),
         },
       ],
@@ -360,6 +371,13 @@ export class RaytracePass extends Pass {
 
     // Update scene matrix world
     scene.updateMatrixWorld(true);
+
+    // Get scene environment and update texture view
+    const environment = scene.environment;
+    if (environment) {
+      this.renderer.updateEnvironmentTexture(environment);
+      this.bindGroup = this.createBindGroup();
+    }
 
     // Get all meshes to render
     const meshes: THREE.Mesh<

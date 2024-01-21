@@ -9,7 +9,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { Renderer } from "./renderer";
 import { RaytracingCamera, RaytracingMaterial, RaytracingScene } from "./scene";
-import { DRACOLoader } from "three/examples/jsm/Addons.js";
+import { DRACOLoader, RGBELoader } from "three/examples/jsm/Addons.js";
 
 // Check for WebGPU support
 const diagnostic = await Renderer.diagnostic();
@@ -30,6 +30,15 @@ const scene = new RaytracingScene();
 
 const camera = new RaytracingCamera(45);
 camera.position.copy(new THREE.Vector3(0, 1, 4));
+
+const envMapTexture = await new RGBELoader().loadAsync(
+  "/static/env/kloofendal_48d_partly_cloudy_puresky_1k.hdr"
+  // "static/env/golden_bay_1k.hdr"
+  // "static/env/hayloft_1k.hdr"
+);
+envMapTexture.mapping = THREE.EquirectangularReflectionMapping;
+scene.background = envMapTexture;
+scene.environment = envMapTexture;
 
 const white = new RaytracingMaterial();
 white.color.set(1.0, 1.0, 1.0);

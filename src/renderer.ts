@@ -4,6 +4,7 @@ import { RaytracePass } from "./passes/raytrace";
 // import noiseBase64 from "./assets/noise";
 import { clamp } from "./utils";
 import { RaytracingCamera, RaytracingScene } from "./scene";
+import * as THREE from "three";
 
 type RendererEventMap = {
   start: () => void;
@@ -30,7 +31,8 @@ export class Renderer {
   public device: GPUDevice;
   public format: GPUTextureFormat = "bgra8unorm";
   public outputTexture: GPUTexture;
-  // public noiseTexture: GPUTexture;
+  public environmentTexture: GPUTexture;
+  public environmentSampler: GPUSampler;
 
   private _scalingFactor: number = 0.25;
   public frames: number = 64;
@@ -43,12 +45,10 @@ export class Renderer {
   private constructor({
     device,
     format,
-    // noiseTexture,
     options,
   }: {
     device: GPUDevice;
     format: GPUTextureFormat;
-    // noiseTexture: GPUTexture;
     options?: {
       enableTimestampQuery?: boolean;
     };
@@ -71,7 +71,11 @@ export class Renderer {
     this.context.configure({ device, format });
 
     this.outputTexture = this.createStorageTexture();
-    // this.noiseTexture = noiseTexture;
+    this.environmentTexture = this.createEnvironmentTexture();
+    this.environmentSampler = this.device.createSampler({
+      magFilter: "linear",
+      minFilter: "linear",
+    });
 
     this.passes = {
       raytrace: new RaytracePass(this),
@@ -94,6 +98,49 @@ export class Renderer {
         GPUTextureUsage.COPY_DST |
         GPUTextureUsage.COPY_SRC,
     });
+  }
+
+  private createEnvironmentTexture() {
+    return this.device.createTexture({
+      size: {
+        width: 1024,
+        height: 512,
+        depthOrArrayLayers: 1,
+      },
+      format: "rgba16float",
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+  }
+
+  updateEnvironmentTexture(texture: THREE.Texture) {
+    if (texture.image.width !== 1024 || texture.image.height !== 512) {
+      throw new Error(
+        "Environment texture must be 1024x512 pixels. Please resize the texture and try again."
+      );
+    }
+
+    if (texture.type !== THREE.HalfFloatType) {
+      throw new Error(
+        "Environment texture must be a floating point texture. Please convert the texture and try again."
+      );
+    }
+
+    this.device.queue.writeTexture(
+      { texture: this.environmentTexture },
+      texture.image.data.buffer,
+      {
+        bytesPerRow: texture.image.width * 8,
+        rowsPerImage: texture.image.height,
+      },
+      {
+        width: texture.image.width,
+        height: texture.image.height,
+        depthOrArrayLayers: 1,
+      }
+    );
   }
 
   resize(width: number, height: number) {
@@ -318,12 +365,9 @@ export class Renderer {
       ? navigator.gpu.getPreferredCanvasFormat()
       : "rgba8unorm";
 
-    // const noiseTexture = await Renderer.loadNoiseTexture(device);
-
     const renderer = new Renderer({
       device,
       format,
-      // noiseTexture,
       options: {
         enableTimestampQuery: hasTimestampQuery,
       },
