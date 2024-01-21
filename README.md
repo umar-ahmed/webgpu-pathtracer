@@ -23,8 +23,8 @@
 - [x] 📸 Camera controls
 - [x] 🔺 Triangle meshes
 - [x] 📦 Bounding volume hierarchies (BVH)
+- [x] 🗺️ Environment maps
 - [ ] 🪙 PBR materials
-- [ ] 🗺️ Environment maps
 - [ ] 🤹 Multiple importance sampling (MIS)
 
 ## Getting Started
