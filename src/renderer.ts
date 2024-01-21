@@ -30,7 +30,7 @@ export class Renderer {
   public device: GPUDevice;
   public format: GPUTextureFormat = "bgra8unorm";
   public outputTexture: GPUTexture;
-  public noiseTexture: GPUTexture;
+  // public noiseTexture: GPUTexture;
 
   private _scalingFactor: number = 0.25;
   public frames: number = 64;
@@ -43,12 +43,12 @@ export class Renderer {
   private constructor({
     device,
     format,
-    noiseTexture,
+    // noiseTexture,
     options,
   }: {
     device: GPUDevice;
     format: GPUTextureFormat;
-    noiseTexture: GPUTexture;
+    // noiseTexture: GPUTexture;
     options?: {
       enableTimestampQuery?: boolean;
     };
@@ -71,7 +71,7 @@ export class Renderer {
     this.context.configure({ device, format });
 
     this.outputTexture = this.createStorageTexture();
-    this.noiseTexture = noiseTexture;
+    // this.noiseTexture = noiseTexture;
 
     this.passes = {
       raytrace: new RaytracePass(this),
@@ -318,12 +318,12 @@ export class Renderer {
       ? navigator.gpu.getPreferredCanvasFormat()
       : "rgba8unorm";
 
-    const noiseTexture = await Renderer.loadNoiseTexture(device);
+    // const noiseTexture = await Renderer.loadNoiseTexture(device);
 
     const renderer = new Renderer({
       device,
       format,
-      noiseTexture,
+      // noiseTexture,
       options: {
         enableTimestampQuery: hasTimestampQuery,
       },

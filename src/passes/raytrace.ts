@@ -236,15 +236,15 @@ export class RaytracePass extends Pass {
             type: "uniform",
           },
         },
-        {
-          binding: 4,
-          visibility: GPUShaderStage.COMPUTE,
-          texture: {
-            viewDimension: "2d",
-            sampleType: "float",
-            multisampled: false,
-          },
-        },
+        // {
+        //   binding: 4,
+        //   visibility: GPUShaderStage.COMPUTE,
+        //   texture: {
+        //     viewDimension: "2d",
+        //     sampleType: "float",
+        //     multisampled: false,
+        //   },
+        // },
         {
           binding: 5,
           visibility: GPUShaderStage.COMPUTE,
@@ -290,10 +290,10 @@ export class RaytracePass extends Pass {
             buffer: this.uniformsBuffer,
           },
         },
-        {
-          binding: 4,
-          resource: this.renderer.noiseTexture.createView(),
-        },
+        // {
+        //   binding: 4,
+        //   resource: this.renderer.noiseTexture.createView(),
+        // },
         {
           binding: 5,
           resource: this.renderer.outputTexture.createView(),

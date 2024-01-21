@@ -301,7 +301,7 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
 @group(0) @binding(1) var<storage, read> materialBuffer: array<Material>;
 @group(0) @binding(2) var<storage, read> bvhBuffer: array<BVHNode>;
 @group(0) @binding(3) var<uniform> uniforms: Uniforms;
-@group(0) @binding(4) var blueNoiseTexture: texture_2d<f32>;
+// @group(0) @binding(4) var blueNoiseTexture: texture_2d<f32>;
 @group(0) @binding(5) var outputTexture: texture_storage_2d<rgba16float, write>;
 
 @compute @workgroup_size(8, 8)
