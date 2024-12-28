@@ -9,7 +9,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { Renderer } from "./renderer";
 import { RaytracingCamera, RaytracingMaterial, RaytracingScene } from "./scene";
-import { DRACOLoader, RGBELoader } from "three/examples/jsm/Addons.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 
 // Check for WebGPU support
 const diagnostic = await Renderer.diagnostic();
