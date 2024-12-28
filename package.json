@@ -24,7 +24,7 @@
     "@types/nprogress": "^0",
     "@types/three": "^0",
     "@webgpu/types": "^0.1.52",
-    "typescript": "^5.2.2",
+    "typescript": "^5.7.2",
     "vite": "^6.0.6"
   }
 }
