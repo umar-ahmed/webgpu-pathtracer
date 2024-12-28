@@ -12,7 +12,6 @@
   "dependencies": {
     "@tweakpane/plugin-camerakit": "^0.3.0",
     "@tweakpane/plugin-essentials": "^0.2.1",
-    "@webgpu/types": "^0.1.40",
     "nprogress": "^0.2.0",
     "three": "^0.160.0",
     "tweakpane": "^4.0.3",
@@ -24,6 +23,7 @@
     "@tweakpane/core": "^2.0.3",
     "@types/nprogress": "^0",
     "@types/three": "^0",
+    "@webgpu/types": "^0.1.52",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }

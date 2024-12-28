@@ -351,10 +351,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@webgpu/types@npm:^0.1.40":
-  version: 0.1.40
-  resolution: "@webgpu/types@npm:0.1.40"
-  checksum: 233fe2b08c84ee952dc1820aa71684b7b8b982240c3caf82c80b0ccff8ca16dbe716ae4f046d020cbd1eec308e78f53e5417d9ee94c533228be6c21c2da79de3
+"@webgpu/types@npm:^0.1.52":
+  version: 0.1.52
+  resolution: "@webgpu/types@npm:0.1.52"
+  checksum: 584c92ce8e35c487b287bee2805e0b5fdf1ebcda51826094d4bb75796c58c9e6b8f33c53c1d7012d14f3419d61ae309c84a202a84e2b6a829ad361b569eed9c1
   languageName: node
   linkType: hard
 
@@ -1387,7 +1387,7 @@ __metadata:
     "@tweakpane/plugin-essentials": "npm:^0.2.1"
     "@types/nprogress": "npm:^0"
     "@types/three": "npm:^0"
-    "@webgpu/types": "npm:^0.1.40"
+    "@webgpu/types": "npm:^0.1.52"
     nprogress: "npm:^0.2.0"
     three: "npm:^0.160.0"
     tweakpane: "npm:^4.0.3"

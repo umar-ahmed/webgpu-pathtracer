@@ -331,10 +331,9 @@ export class Renderer {
         return { supported: false };
       }
 
-      const info = await adapter.requestAdapterInfo();
-
-      return { supported: true, info };
+      return { supported: true, info: adapter.info };
     } catch (err) {
+      console.error(err);
       return { supported: false };
     }
   }
