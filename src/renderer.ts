@@ -278,6 +278,19 @@ export class Renderer {
     }
   }
 
+  async destroy() {
+    // Wait for any pending GPU operations to complete
+    await this.device.queue.onSubmittedWorkDone();
+    
+    // Destroy all textures first
+    this.outputTexture.destroy();
+    this.environmentTexture.destroy();
+    
+    // Destroy the device
+    this.device.destroy();
+    this.canvas.remove();
+  }
+
   start() {
     if (this._frame > this.frames) {
       this.status = "idle";

@@ -250,29 +250,43 @@ sceneFolder
   .on("change", async (ev) => {
     const file = ev.value as unknown as File | null;
     if (file instanceof File) {
-      const loader = new GLTFLoader();
-      const dracoLoader = new DRACOLoader();
-      dracoLoader.setDecoderPath("/static/draco/");
-      loader.setDRACOLoader(dracoLoader);
-      const gltf = await loader.loadAsync(URL.createObjectURL(file), (e) => {
-        const progress = e.loaded / e.total;
-        console.log(`Loading model: ${Math.round(progress * 100)}%`);
-      });
+      try {
+        NProgress.start();
+        const loader = new GLTFLoader();
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath("/static/draco/");
+        loader.setDRACOLoader(dracoLoader);
+        
+        const gltf = await loader.loadAsync(URL.createObjectURL(file), (e) => {
+          const progress = e.loaded / e.total;
+          NProgress.set(progress);
+          console.log(`Loading model: ${Math.round(progress * 100)}%`);
+        });
 
-      const model = gltf.scene;
-      model.position.x = 0;
-      model.position.y = 0.5;
-      model.position.z = 0;
-      const bounds = new THREE.Box3().setFromObject(model);
-      const scale = 1 / Math.max(bounds.max.x, bounds.max.y, bounds.max.z);
-      model.scale.set(scale, scale, scale);
-      model.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.material = white;
-        }
-      });
-      scene.clear();
-      scene.add(model);
+        const model = gltf.scene;
+        model.position.x = 0;
+        model.position.y = 0.5;
+        model.position.z = 0;
+        const bounds = new THREE.Box3().setFromObject(model);
+        const scale = 1 / Math.max(bounds.max.x, bounds.max.y, bounds.max.z);
+        model.scale.set(scale, scale, scale);
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.material = white;
+          }
+        });
+        scene.clear();
+        scene.add(model);
+      } catch (error) {
+        console.error("Failed to load model:", error);
+        // Restore default scene on error
+        scene.clear();
+        scene.add(plane);
+        scene.add(box);
+        scene.add(sphere);
+      } finally {
+        NProgress.done();
+      }
     } else {
       scene.clear();
       scene.add(plane);
@@ -281,7 +295,6 @@ sceneFolder
     }
 
     scene.needsUpdate = true;
-
     renderer.update(scene, camera);
     renderer.reset();
   });
@@ -368,7 +381,9 @@ renderer.setUniforms("fullscreen", {
   tonemapping: PARAMS.tonemapping,
 });
 
+
 // Start rendering
+let animationFrameId: number;
 function render() {
   (fpsGraph as any).begin();
 
@@ -377,7 +392,26 @@ function render() {
 
   (fpsGraph as any).end();
 
-  requestAnimationFrame(render);
+  animationFrameId = requestAnimationFrame(render);
 }
 
-requestAnimationFrame(render);
+// Start rendering
+animationFrameId = requestAnimationFrame(render);
+
+// Clean up resources when window is closed
+window.addEventListener('beforeunload', async () => {
+  // Cancel any pending animation frames
+  cancelAnimationFrame(animationFrameId);
+  
+  // Stop the renderer
+  renderer.pause();
+  
+  // Ensure we wait for the renderer to be destroyed
+  try {
+    await renderer.destroy();
+    orbitControls.dispose();
+    pane.dispose();
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+  }
+}, { once: true });
