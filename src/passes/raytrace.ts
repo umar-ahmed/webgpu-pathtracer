@@ -447,13 +447,13 @@ export class RaytracePass extends Pass {
           // Transform normals to world space
           aNormal.applyMatrix3(
             new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
-          );
+          ).normalize();
           bNormal.applyMatrix3(
             new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
-          );
+          ).normalize();
           cNormal.applyMatrix3(
             new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
-          );
+          ).normalize();
 
           let materialIndex = materials.indexOf(mesh.material);
 

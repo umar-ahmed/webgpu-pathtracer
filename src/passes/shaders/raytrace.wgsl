@@ -116,15 +116,37 @@ fn rayTriangleIntersect(ray: Ray, triangle: Triangle) -> Hit {
 }
 
 fn rayAABBIntersect(ray: Ray, aabbMin: vec3f, aabbMax: vec3f) -> bool {
-  let t1 = (aabbMin.x - ray.origin.x) / ray.direction.x;
-  let t2 = (aabbMax.x - ray.origin.x) / ray.direction.x;
-  let t3 = (aabbMin.y - ray.origin.y) / ray.direction.y;
-  let t4 = (aabbMax.y - ray.origin.y) / ray.direction.y;
-  let t5 = (aabbMin.z - ray.origin.z) / ray.direction.z;
-  let t6 = (aabbMax.z - ray.origin.z) / ray.direction.z;
+  var tmin = -INF;
+  var tmax = INF;
 
-  let tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
-  let tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+  // Check each axis
+  for (var i = 0; i < 3; i++) {
+    let dir = ray.direction[i];
+    let orig = ray.origin[i];
+    let minVal = aabbMin[i];
+    let maxVal = aabbMax[i];
+
+    if (abs(dir) < EPSILON) {
+      // Ray is parallel to slab, check if origin is within slab
+      if (orig < minVal || orig > maxVal) {
+        return false;
+      }
+    } else {
+      // Regular slab test
+      let t1 = (minVal - orig) / dir;
+      let t2 = (maxVal - orig) / dir;
+      
+      let tNear = min(t1, t2);
+      let tFar = max(t1, t2);
+      
+      tmin = max(tmin, tNear);
+      tmax = min(tmax, tFar);
+      
+      if (tmin > tmax) {
+        return false;
+      }
+    }
+  }
 
   return tmax >= max(0.0, tmin);
 }
@@ -141,7 +163,13 @@ fn rayBVHIntersect(ray: Ray, bvhIndex: i32) -> Hit {
   stack[stackSize] = bvhIndex;
   stackSize++;
 
-  while (stackSize > 0 && stackSize < MAX_STACK_SIZE) {
+  while (stackSize > 0) {
+    // Check for stack overflow
+    if (stackSize >= MAX_STACK_SIZE) {
+      // Return current best hit and abort further traversal
+      return hit;
+    }
+
     stackSize--;
     let currentNodeIndex = stack[stackSize];
     let currentNode = bvhBuffer[currentNodeIndex];
@@ -194,9 +222,16 @@ fn cameraToRay(camera: Camera, uv: vec2f) -> Ray {
   let u = l + (r - l) * uv.x;
   let v = b + (t - b) * uv.y;
 
-  // Construct a coordinate system from the camera's direction
+  // Construct a coordinate system from the camera's direction with improved handling of edge cases
   let w = normalize(-camera.direction);
-  let u_dir = normalize(cross(vec3f(0.0, 1.0, 0.0), w));
+  var up = vec3f(0.0, 1.0, 0.0);
+  
+  // Handle the case where camera direction is aligned with up vector
+  if (abs(dot(w, up)) > 0.99999) {
+    up = vec3f(0.0, 0.0, 1.0);  // Use forward vector instead
+  }
+  
+  let u_dir = normalize(cross(up, w));
   let v_dir = cross(w, u_dir);
 
   // Rotate the ray direction by the camera's orientation
@@ -268,7 +303,6 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
         isSpecularBounce = 1.0;
       }
       
-      // Calculate ray direction based on material properties
       traceRay.origin = hit.position;
       traceRay.direction = mix(diffuseDirection, specularDirection, isSpecularBounce * (1.0 - material.roughness));
 
@@ -276,11 +310,27 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
+      // Improved environment map sampling with better seam handling
+      var dir = traceRay.direction;
       
-      // Calculate UV coordinates from the ray direction + envMapRotation
-      var uv = vec2f(atan2(traceRay.direction.x, traceRay.direction.z) * INVTWOPI + 0.5, -1.0 * asin(traceRay.direction.y) * INVPI + 0.5);
-      uv += vec2f(uniforms.envMapRotation / TWOPI, 0.0);
-      uv = fract(uv);
+      // Rotate the direction vector based on envMapRotation
+      let cosR = cos(uniforms.envMapRotation);
+      let sinR = sin(uniforms.envMapRotation);
+      dir = vec3f(
+        dir.x * cosR - dir.z * sinR,
+        dir.y,
+        dir.x * sinR + dir.z * cosR
+      );
+      
+      // Calculate UV coordinates with better wrapping
+      var phi = atan2(dir.x, dir.z);
+      var theta = asin(clamp(dir.y, -1.0, 1.0));
+      
+      // Convert to UV space with smooth wrapping
+      var uv = vec2f(
+        phi * INVTWOPI + 0.5,
+        -theta * INVPI + 0.5
+      );
       
       // Sample the environment texture
       let texel = textureSampleLevel(environmentTexture, environmentSampler, uv, 0.0);
