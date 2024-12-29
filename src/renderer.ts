@@ -33,6 +33,8 @@ export class Renderer {
   public outputTexture: GPUTexture;
   public environmentTexture: GPUTexture;
   public environmentTextureSampler: GPUSampler;
+  public environmentCDFTexture: GPUTexture;
+  public environmentCDFTextureSampler: GPUSampler;
 
   private _scalingFactor: number = 0.25;
   public frames: number = 64;
@@ -76,6 +78,11 @@ export class Renderer {
       magFilter: "linear",
       minFilter: "linear",
     });
+    this.environmentCDFTexture = this.createEnvironmentCDFTexture();
+    this.environmentCDFTextureSampler = this.device.createSampler({
+      magFilter: "linear",
+      minFilter: "linear",
+    });
 
     this.passes = {
       raytrace: new RaytracePass(this),
@@ -86,6 +93,7 @@ export class Renderer {
 
   private createStorageTexture() {
     return this.device.createTexture({
+      label: "Output Texture",
       size: {
         width: this.width,
         height: this.height,
@@ -112,6 +120,15 @@ export class Renderer {
     });
   }
 
+  private createEnvironmentCDFTexture() {
+    return this.device.createTexture({
+      label: "Environment CDF Texture",
+      size: { width: 1024, height: 512 },
+      format: "rgba32float",
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+  }
+
   updateEnvironmentTexture(texture: THREE.Texture) {
     if (texture.image.width !== 1024 || texture.image.height !== 512) {
       throw new Error(
@@ -128,6 +145,129 @@ export class Renderer {
     this.device.queue.writeTexture(
       { texture: this.environmentTexture },
       texture.image.data,
+      {
+        bytesPerRow: texture.image.width * 16,
+        rowsPerImage: texture.image.height,
+      },
+      {
+        width: texture.image.width,
+        height: texture.image.height,
+        depthOrArrayLayers: 1,
+      }
+    );
+
+    const luminanceMap = new Float32Array(
+      texture.image.width * texture.image.height
+    );
+
+    for (let i = 0; i < luminanceMap.length; i++) {
+      const r = texture.image.data[4 * i];
+      const g = texture.image.data[4 * i + 1];
+      const b = texture.image.data[4 * i + 2];
+
+      const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+      luminanceMap[i] = luminance;
+    }
+
+    const rowWeightedLuminanceMap = new Float32Array(
+      texture.image.width * texture.image.height
+    );
+
+    for (let y = 0; y < texture.image.height; y++) {
+      for (let x = 0; x < texture.image.width; x++) {
+        const i = y * texture.image.width + x;
+
+        const y_range = (y + 0.5) / texture.image.height;
+        const theta = y_range * Math.PI;
+        const weight = Math.sin(theta);
+
+        rowWeightedLuminanceMap[i] = luminanceMap[i] * weight;
+      }
+    }
+
+    const marginalCDF = new Float32Array(texture.image.height);
+
+    {
+      const rowTotalWeightedLuminances = new Float32Array(texture.image.height);
+      let total = 0;
+      for (let y = 0; y < texture.image.height; y++) {
+        let rowTotal = 0;
+
+        for (let x = 0; x < texture.image.width; x++) {
+          const i = y * texture.image.width + x;
+          rowTotal += rowWeightedLuminanceMap[i];
+        }
+
+        rowTotalWeightedLuminances[y] = rowTotal;
+        total += rowTotal;
+      }
+
+      for (let y = 0; y < texture.image.height; y++) {
+        rowTotalWeightedLuminances[y] /= total;
+      }
+
+      for (let y = 0; y < texture.image.height; y++) {
+        let sum = 0;
+        for (let i = 0; i < y; i++) {
+          sum += rowTotalWeightedLuminances[i];
+        }
+        marginalCDF[y] = sum;
+      }
+    }
+
+    const conditionalCDF = new Float32Array(
+      texture.image.width * texture.image.height
+    );
+
+    {
+      const columnTotalLuminances = new Float32Array(
+        texture.image.width * texture.image.height
+      );
+
+      for (let y = 0; y < texture.image.height; y++) {
+        let rowTotal = 0;
+        for (let x = 0; x < texture.image.width; x++) {
+          const i = y * texture.image.width + x;
+          rowTotal += luminanceMap[i];
+        }
+
+        for (let x = 0; x < texture.image.width; x++) {
+          const i = y * texture.image.width + x;
+          columnTotalLuminances[i] = luminanceMap[i] / rowTotal;
+        }
+      }
+
+      for (let y = 0; y < texture.image.height; y++) {
+        for (let x = 0; x < texture.image.width; x++) {
+          const i = y * texture.image.width + x;
+          let sum = 0;
+          for (let j = y * texture.image.width; j < i; j++) {
+            sum += columnTotalLuminances[j];
+          }
+          conditionalCDF[i] = sum;
+        }
+      }
+    }
+
+    const cdf = new Float32Array(
+      texture.image.width * texture.image.height * 4
+    );
+
+    for (let y = 0; y < texture.image.height; y++) {
+      for (let x = 0; x < texture.image.width; x++) {
+        const i = y * texture.image.width + x;
+
+        cdf[4 * i] = marginalCDF[y];
+        cdf[4 * i + 1] = conditionalCDF[i];
+        cdf[4 * i + 2] = 0.0; // Unused
+        cdf[4 * i + 3] = 1.0; // Unused
+      }
+    }
+
+    this.device.queue.writeTexture(
+      { texture: this.environmentCDFTexture },
+      cdf,
       {
         bytesPerRow: texture.image.width * 16,
         rowsPerImage: texture.image.height,

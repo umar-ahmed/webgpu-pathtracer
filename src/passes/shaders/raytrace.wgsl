@@ -349,7 +349,9 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
 @group(0) @binding(3) var<uniform> uniforms: Uniforms;
 @group(0) @binding(4) var environmentTexture: texture_2d<f32>;
 @group(0) @binding(5) var environmentTextureSampler: sampler;
-@group(0) @binding(6) var outputTexture: texture_storage_2d<rgba16float, write>;
+@group(0) @binding(6) var environmentCDFTexture: texture_2d<f32>;
+@group(0) @binding(7) var environmentCDFTextureSampler: sampler;
+@group(0) @binding(8) var outputTexture: texture_storage_2d<rgba16float, write>;
 
 @compute @workgroup_size(8, 8)
 fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
@@ -403,6 +405,7 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
 
   // Debug env map
   // color = textureSampleLevel(environmentTexture, environmentTextureSampler, uv, 0.0).rgb;
+  // color = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, uv, 0.0).rgb;
 
   textureStore(outputTexture, globalId.xy, vec4f(color, 1.0));
 }

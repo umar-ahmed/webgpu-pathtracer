@@ -255,6 +255,22 @@ export class RaytracePass extends Pass {
         {
           binding: 6,
           visibility: GPUShaderStage.COMPUTE,
+          texture: {
+            viewDimension: "2d",
+            sampleType: "float",
+            multisampled: false,
+          },
+        },
+        {
+          binding: 7,
+          visibility: GPUShaderStage.COMPUTE,
+          sampler: {
+            type: "filtering",
+          },
+        },
+        {
+          binding: 8,
+          visibility: GPUShaderStage.COMPUTE,
           storageTexture: {
             access: "write-only",
             format: "rgba16float",
@@ -307,6 +323,14 @@ export class RaytracePass extends Pass {
         },
         {
           binding: 6,
+          resource: this.renderer.environmentCDFTexture.createView(),
+        },
+        {
+          binding: 7,
+          resource: this.renderer.environmentCDFTextureSampler,
+        },
+        {
+          binding: 8,
           resource: this.renderer.outputTexture.createView(),
         },
       ],
