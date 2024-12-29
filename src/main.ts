@@ -38,7 +38,9 @@ const scene = new RaytracingScene();
 const camera = new RaytracingCamera(45);
 camera.position.copy(new THREE.Vector3(0, 1, 4));
 
-const envMapLoader = new RGBELoader().setPath("/static/env/");
+const envMapLoader = new RGBELoader()
+  .setPath("/static/env/")
+  .setDataType(THREE.FloatType);
 const envMapTexture = await envMapLoader.loadAsync(ENVMAPS[0]);
 envMapTexture.mapping = THREE.EquirectangularReflectionMapping;
 scene.background = envMapTexture;
@@ -256,7 +258,7 @@ sceneFolder
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath("/static/draco/");
         loader.setDRACOLoader(dracoLoader);
-        
+
         const gltf = await loader.loadAsync(URL.createObjectURL(file), (e) => {
           const progress = e.loaded / e.total;
           NProgress.set(progress);
@@ -381,7 +383,6 @@ renderer.setUniforms("fullscreen", {
   tonemapping: PARAMS.tonemapping,
 });
 
-
 // Start rendering
 let animationFrameId: number;
 function render() {
@@ -399,19 +400,23 @@ function render() {
 animationFrameId = requestAnimationFrame(render);
 
 // Clean up resources when window is closed
-window.addEventListener('beforeunload', async () => {
-  // Cancel any pending animation frames
-  cancelAnimationFrame(animationFrameId);
-  
-  // Stop the renderer
-  renderer.pause();
-  
-  // Ensure we wait for the renderer to be destroyed
-  try {
-    await renderer.destroy();
-    orbitControls.dispose();
-    pane.dispose();
-  } catch (error) {
-    console.error('Error during cleanup:', error);
-  }
-}, { once: true });
+window.addEventListener(
+  "beforeunload",
+  async () => {
+    // Cancel any pending animation frames
+    cancelAnimationFrame(animationFrameId);
+
+    // Stop the renderer
+    renderer.pause();
+
+    // Ensure we wait for the renderer to be destroyed
+    try {
+      await renderer.destroy();
+      orbitControls.dispose();
+      pane.dispose();
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+    }
+  },
+  { once: true }
+);

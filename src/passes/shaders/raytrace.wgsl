@@ -333,7 +333,7 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       );
       
       // Sample the environment texture
-      let texel = textureSampleLevel(environmentTexture, environmentSampler, uv, 0.0);
+      let texel = textureSampleLevel(environmentTexture, environmentTextureSampler, uv, 0.0);
       incomingLight += rayColor * vec3f(texel.rgb) * uniforms.envMapIntensity;
       
       break;
@@ -348,7 +348,7 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
 @group(0) @binding(2) var<storage, read> bvhBuffer: array<BVHNode>;
 @group(0) @binding(3) var<uniform> uniforms: Uniforms;
 @group(0) @binding(4) var environmentTexture: texture_2d<f32>;
-@group(0) @binding(5) var environmentSampler: sampler;
+@group(0) @binding(5) var environmentTextureSampler: sampler;
 @group(0) @binding(6) var outputTexture: texture_storage_2d<rgba16float, write>;
 
 @compute @workgroup_size(8, 8)
@@ -400,6 +400,9 @@ fn computeMain(@builtin(global_invocation_id) globalId: vec3u) {
   // color = vec3f(randNormal(&seed));
   // color = randDirection(&seed);
   // color = randHemisphere(&seed, vec3f(0.0, 1.0, 0.0));
+
+  // Debug env map
+  // color = textureSampleLevel(environmentTexture, environmentTextureSampler, uv, 0.0).rgb;
 
   textureStore(outputTexture, globalId.xy, vec4f(color, 1.0));
 }

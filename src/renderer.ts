@@ -32,7 +32,7 @@ export class Renderer {
   public format: GPUTextureFormat = "bgra8unorm";
   public outputTexture: GPUTexture;
   public environmentTexture: GPUTexture;
-  public environmentSampler: GPUSampler;
+  public environmentTextureSampler: GPUSampler;
 
   private _scalingFactor: number = 0.25;
   public frames: number = 64;
@@ -72,7 +72,7 @@ export class Renderer {
 
     this.outputTexture = this.createStorageTexture();
     this.environmentTexture = this.createEnvironmentTexture();
-    this.environmentSampler = this.device.createSampler({
+    this.environmentTextureSampler = this.device.createSampler({
       magFilter: "linear",
       minFilter: "linear",
     });
@@ -102,12 +102,9 @@ export class Renderer {
 
   private createEnvironmentTexture() {
     return this.device.createTexture({
-      size: {
-        width: 1024,
-        height: 512,
-        depthOrArrayLayers: 1,
-      },
-      format: "rgba16float",
+      label: "Environment Texture",
+      size: { width: 1024, height: 512 },
+      format: "rgba32float",
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST |
@@ -122,7 +119,7 @@ export class Renderer {
       );
     }
 
-    if (texture.type !== THREE.HalfFloatType) {
+    if (texture.type !== THREE.FloatType) {
       throw new Error(
         "Environment texture must be a floating point texture. Please convert the texture and try again."
       );
@@ -130,9 +127,9 @@ export class Renderer {
 
     this.device.queue.writeTexture(
       { texture: this.environmentTexture },
-      texture.image.data.buffer,
+      texture.image.data,
       {
-        bytesPerRow: texture.image.width * 8,
+        bytesPerRow: texture.image.width * 16,
         rowsPerImage: texture.image.height,
       },
       {
@@ -281,11 +278,11 @@ export class Renderer {
   async destroy() {
     // Wait for any pending GPU operations to complete
     await this.device.queue.onSubmittedWorkDone();
-    
+
     // Destroy all textures first
     this.outputTexture.destroy();
     this.environmentTexture.destroy();
-    
+
     // Destroy the device
     this.device.destroy();
     this.canvas.remove();
@@ -357,6 +354,8 @@ export class Renderer {
     const hasBGRA8unormStorage =
       adapter?.features.has("bgra8unorm-storage") ?? false;
     const hasTimestampQuery = adapter?.features.has("timestamp-query") ?? false;
+    const hasFloat32Filterable =
+      adapter?.features.has("float32-filterable") ?? false;
 
     const requiredFeatures: GPUFeatureName[] = [];
 
@@ -365,6 +364,9 @@ export class Renderer {
     }
     if (hasTimestampQuery) {
       requiredFeatures.push("timestamp-query");
+    }
+    if (hasFloat32Filterable) {
+      requiredFeatures.push("float32-filterable");
     }
 
     const device = await adapter?.requestDevice({ requiredFeatures });
