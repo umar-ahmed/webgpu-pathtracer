@@ -324,16 +324,16 @@ fn sampleEnvironmentMap(seed: ptr<function, u32>) -> vec3f {
   let theta = v * PI;
 
   // Convert to Cartesian coordinates
-  let x = sin(phi) * cos(theta);
-  let y = cos(phi);
-  let z = sin(phi) * sin(theta);
+  let x = sin(theta) * cos(phi);
+  let y = sin(theta) * sin(phi);
+  let z = cos(theta);
 
   // Sample the environment map
   let environmentColor = textureSampleLevel(environmentTexture, environmentTextureSampler, vec2f(u, v), 0.0).rgb;
 
   // Compute probability density at the sample direction
-  let cdfValues = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(u, v), 0.0).rg;
-  let pdf = max(cdfValues.r * cdfValues.g, EPSILON);
+  var pdf = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(u, v), 0.0).b;
+  pdf = max(pdf, EPSILON);
 
   return environmentColor / pdf;
 }
