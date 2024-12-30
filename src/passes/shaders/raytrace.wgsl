@@ -286,18 +286,44 @@ fn randPointInCircle(seed: ptr<function, u32>) -> vec2f {
   return vec2f(rho * cos(theta), rho * sin(theta));
 }
 
-fn sampleEnvironmentMap(seed: ptr<function, u32>) -> vec3f {
+fn getEnvironmentMapUVFromRay(ray: Ray) -> vec2f {
+  // Improved environment map sampling with better seam handling
+  var dir = ray.direction;
+  
+  // Rotate the direction vector based on envMapRotation
+  let cosR = cos(uniforms.envMapRotation);
+  let sinR = sin(uniforms.envMapRotation);
+  dir = vec3f(
+    dir.x * cosR - dir.z * sinR,
+    dir.y,
+    dir.x * sinR + dir.z * cosR
+  );
+  
+  // Calculate UV coordinates with better wrapping
+  let phi = atan2(dir.x, dir.z);
+  let theta = asin(clamp(dir.y, -1.0, 1.0));
+  
+  // Convert to UV space with smooth wrapping
+  let uv = vec2f(
+    phi * INVTWOPI + 0.5,
+    -theta * INVPI + 0.5
+  );
+  
+  return uv;
+}
+
+fn getEnvironmentMapUV(seed: ptr<function, u32>) -> vec2f {
   // Get two random numbers for sampling
-  let u1 = rand(seed);
-  let u2 = rand(seed);
+  let r1 = rand(seed);
+  let r2 = rand(seed);
 
   // Binary search to find v coordinate
   var vMin = 0.0;
   var vMax = 1.0;
-  for (var i = 0; i < 10; i++) {
+  for (var i = 0; i < 8; i++) {
     let vMid = (vMin + vMax) / 2.0;
-    let cdfValue = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(u1, vMid), 0.0).r;
-    if (cdfValue < u2) {
+    let cdfValue = getEnvironmentMapMarginalCDF(vec2f(0.5, vMid));
+    if (cdfValue < r1) {
       vMin = vMid;
     } else {
       vMax = vMid;
@@ -308,10 +334,10 @@ fn sampleEnvironmentMap(seed: ptr<function, u32>) -> vec3f {
   // Binary search to find u coordinate
   var uMin = 0.0;
   var uMax = 1.0;
-  for (var i = 0; i < 10; i++) {
+  for (var i = 0; i < 8; i++) {
     let uMid = (uMin + uMax) / 2.0;
-    let cdfValue = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(uMid, v), 0.0).r;
-    if (cdfValue < u2) {
+    let cdfValue = getEnvironmentMapConditionalCDF(vec2f(uMid, v));
+    if (cdfValue < r2) {
       uMin = uMid;
     } else {
       uMax = uMid;
@@ -319,23 +345,29 @@ fn sampleEnvironmentMap(seed: ptr<function, u32>) -> vec3f {
   }
   let u = (uMin + uMax) / 2.0;
 
-  // Convert to spherical coordinates
-  let phi = u * TWOPI;
-  let theta = v * PI;
+  return vec2f(u, v);
+}
 
-  // Convert to Cartesian coordinates
-  let x = sin(theta) * cos(phi);
-  let y = sin(theta) * sin(phi);
-  let z = cos(theta);
+fn getEnvironmentMapMarginalCDF(uv: vec2f) -> f32 {
+  var cdf = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, uv, 0.0).r;
+  cdf = max(cdf, EPSILON);
+  return cdf;
+}
 
-  // Sample the environment map
-  let environmentColor = textureSampleLevel(environmentTexture, environmentTextureSampler, vec2f(u, v), 0.0).rgb;
+fn getEnvironmentMapConditionalCDF(uv: vec2f) -> f32 {
+  var cdf = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, uv, 0.0).g;
+  cdf = max(cdf, EPSILON);
+  return cdf;
+}
 
-  // Compute probability density at the sample direction
-  var pdf = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(u, v), 0.0).b;
+fn getEnvironmentMapPDF(uv: vec2f) -> f32 {
+  var pdf = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, uv, 0.0).b;
   pdf = max(pdf, EPSILON);
+  return pdf;
+}
 
-  return environmentColor / pdf;
+fn getEnvironmentMapColor(uv: vec2f) -> vec3f {
+  return textureSampleLevel(environmentTexture, environmentTextureSampler, uv, 0.0).rgb;
 }
 
 fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
@@ -362,33 +394,14 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
-      // Improved environment map sampling with better seam handling
-      var dir = traceRay.direction;
+      var uv = getEnvironmentMapUVFromRay(traceRay);
+      // uv = getEnvironmentMapUV(seed);
       
-      // Rotate the direction vector based on envMapRotation
-      let cosR = cos(uniforms.envMapRotation);
-      let sinR = sin(uniforms.envMapRotation);
-      dir = vec3f(
-        dir.x * cosR - dir.z * sinR,
-        dir.y,
-        dir.x * sinR + dir.z * cosR
-      );
+      incomingLight += rayColor * getEnvironmentMapColor(uv) * uniforms.envMapIntensity;
       
-      // Calculate UV coordinates with better wrapping
-      var phi = atan2(dir.x, dir.z);
-      var theta = asin(clamp(dir.y, -1.0, 1.0));
-      
-      // Convert to UV space with smooth wrapping
-      var uv = vec2f(
-        phi * INVTWOPI + 0.5,
-        -theta * INVPI + 0.5
-      );
-      
-      // Sample the environment texture
-      let texel = textureSampleLevel(environmentTexture, environmentTextureSampler, uv, 0.0);
-      incomingLight += rayColor * vec3f(texel.rgb) * uniforms.envMapIntensity;
-      
-      // incomingLight += rayColor * sampleEnvironmentMap(seed) * uniforms.envMapIntensity;
+      // PDF correction
+      // let pdf = getEnvironmentMapPDF(uv);
+      // incomingLight /= pdf;
       
       break;
     }

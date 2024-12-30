@@ -260,7 +260,7 @@ export class Renderer {
 
         cdf[4 * i] = marginalCDF[y];
         cdf[4 * i + 1] = conditionalCDF[i];
-        cdf[4 * i + 2] = marginalCDF[y] * conditionalCDF[i]; // PDF
+        cdf[4 * i + 2] = rowWeightedLuminanceMap[i]; // PDF
         cdf[4 * i + 3] = 1.0; // Unused
       }
     }
