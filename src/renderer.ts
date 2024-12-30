@@ -80,8 +80,8 @@ export class Renderer {
     });
     this.environmentCDFTexture = this.createEnvironmentCDFTexture();
     this.environmentCDFTextureSampler = this.device.createSampler({
-      magFilter: "linear",
-      minFilter: "linear",
+      magFilter: "nearest",
+      minFilter: "nearest",
     });
 
     this.passes = {

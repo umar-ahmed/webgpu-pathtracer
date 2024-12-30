@@ -286,6 +286,58 @@ fn randPointInCircle(seed: ptr<function, u32>) -> vec2f {
   return vec2f(rho * cos(theta), rho * sin(theta));
 }
 
+fn sampleEnvironmentMap(seed: ptr<function, u32>) -> vec3f {
+  // Get two random numbers for sampling
+  let u1 = rand(seed);
+  let u2 = rand(seed);
+
+  // Binary search to find v coordinate
+  var vMin = 0.0;
+  var vMax = 1.0;
+  for (var i = 0; i < 10; i++) {
+    let vMid = (vMin + vMax) / 2.0;
+    let cdfValue = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(u1, vMid), 0.0).r;
+    if (cdfValue < u2) {
+      vMin = vMid;
+    } else {
+      vMax = vMid;
+    }
+  }
+  let v = (vMin + vMax) / 2.0;
+
+  // Binary search to find u coordinate
+  var uMin = 0.0;
+  var uMax = 1.0;
+  for (var i = 0; i < 10; i++) {
+    let uMid = (uMin + uMax) / 2.0;
+    let cdfValue = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(uMid, v), 0.0).r;
+    if (cdfValue < u2) {
+      uMin = uMid;
+    } else {
+      uMax = uMid;
+    }
+  }
+  let u = (uMin + uMax) / 2.0;
+
+  // Convert to spherical coordinates
+  let phi = u * TWOPI;
+  let theta = v * PI;
+
+  // Convert to Cartesian coordinates
+  let x = sin(phi) * cos(theta);
+  let y = cos(phi);
+  let z = sin(phi) * sin(theta);
+
+  // Sample the environment map
+  let environmentColor = textureSampleLevel(environmentTexture, environmentTextureSampler, vec2f(u, v), 0.0).rgb;
+
+  // Compute probability density at the sample direction
+  let cdfValues = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, vec2f(u, v), 0.0).rg;
+  let pdf = max(cdfValues.r * cdfValues.g, EPSILON);
+
+  return environmentColor / pdf;
+}
+
 fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
   var traceRay = ray;
   var incomingLight = vec3f(0.0);
@@ -335,6 +387,8 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       // Sample the environment texture
       let texel = textureSampleLevel(environmentTexture, environmentTextureSampler, uv, 0.0);
       incomingLight += rayColor * vec3f(texel.rgb) * uniforms.envMapIntensity;
+      
+      // incomingLight += rayColor * sampleEnvironmentMap(seed) * uniforms.envMapIntensity;
       
       break;
     }

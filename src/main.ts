@@ -178,7 +178,7 @@ pane
   .on("change", () => renderer.reset());
 
 pane
-  .addBinding(renderer, "frames", { min: 2, max: 512, step: 1 })
+  .addBinding(renderer, "frames", { min: 2, max: 2048, step: 1 })
   .on("change", ({ last }) => {
     if (!last) return;
     renderer.reset();
