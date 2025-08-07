@@ -380,42 +380,6 @@ fn getEnvironmentMapColor(uv: vec2f) -> vec3f {
   return textureSampleLevel(environmentTexture, environmentTextureSampler, uv, 0.0).rgb;
 }
 
-fn uvToDirection(uv: vec2f) -> vec3f {
-  // Convert UV coordinates back to spherical coordinates
-  let phi = (uv.x - 0.5) * TWOPI;
-  let theta = (1.0 - uv.y) * PI;  // v=0 -> theta=PI, v=1 -> theta=0
-  
-  let sinTheta = sin(theta);
-  let cosTheta = cos(theta);
-  let sinPhi = sin(phi);
-  let cosPhi = cos(phi);
-  
-  var direction = vec3f(sinTheta * sinPhi, cosTheta, sinTheta * cosPhi);
-  
-  // Apply environment map rotation
-  let cosR = cos(uniforms.envMapRotation);
-  let sinR = sin(uniforms.envMapRotation);
-  direction = vec3f(
-    direction.x * cosR + direction.z * sinR,
-    direction.y,
-    -direction.x * sinR + direction.z * cosR
-  );
-  
-  return direction;
-}
-
-fn getBSDFPDF(incomingDirection: vec3f, outgoingDirection: vec3f, normal: vec3f) -> f32 {
-  // Calculate PDF for BSDF sampling (cosine-weighted hemisphere sampling)
-  let cosTheta = max(0.0, dot(outgoingDirection, normal));
-  return cosTheta * INVPI;
-}
-
-fn powerHeuristic(pdf1: f32, pdf2: f32, beta: f32) -> f32 {
-  let p1 = pow(pdf1, beta);
-  let p2 = pow(pdf2, beta);
-  return p1 / (p1 + p2);
-}
-
 fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
   var traceRay = ray;
   var incomingLight = vec3f(0.0);
