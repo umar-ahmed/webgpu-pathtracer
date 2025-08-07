@@ -405,7 +405,7 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
     } else {
       // Environment sampling with MIS
       var uv = getEnvironmentMapUVFromRay(traceRay);
-      let envColor = getEnvironmentMapColor(uv) * uniforms.envMapIntensity;
+      var envColor = getEnvironmentMapColor(uv) * uniforms.envMapIntensity;
       
       if (i > 0) {
         // Apply MIS for indirect lighting
