@@ -370,8 +370,7 @@ fn getEnvironmentMapPDF(uv: vec2f) -> f32 {
   let sinTheta = sin(theta);
   
   // Jacobian for spherical to UV transformation: sin(theta) / (2*pi^2)
-  let jacobian = sinTheta * INVTWOPI * INVPI;
-  jacobian = max(jacobian, EPSILON);  // Avoid division by zero at poles
+  let jacobian = max(sinTheta * INVTWOPI * INVPI, EPSILON);  // Avoid division by zero at poles
   
   return pdf / jacobian;
 }
