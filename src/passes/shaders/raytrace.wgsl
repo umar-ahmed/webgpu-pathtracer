@@ -317,10 +317,10 @@ fn getEnvironmentMapUV(seed: ptr<function, u32>) -> vec2f {
   let r1 = rand(seed);
   let r2 = rand(seed);
 
-  // Binary search to find v coordinate
+  // Binary search to find v coordinate (increased precision from 8 to 18 iterations)
   var vMin = 0.0;
   var vMax = 1.0;
-  for (var i = 0; i < 8; i++) {
+  for (var i = 0; i < 18; i++) {
     let vMid = (vMin + vMax) / 2.0;
     let cdfValue = getEnvironmentMapMarginalCDF(vec2f(0.5, vMid));
     if (cdfValue < r1) {
@@ -331,10 +331,10 @@ fn getEnvironmentMapUV(seed: ptr<function, u32>) -> vec2f {
   }
   let v = (vMin + vMax) / 2.0;
 
-  // Binary search to find u coordinate
+  // Binary search to find u coordinate (increased precision from 8 to 18 iterations)
   var uMin = 0.0;
   var uMax = 1.0;
-  for (var i = 0; i < 8; i++) {
+  for (var i = 0; i < 18; i++) {
     let uMid = (uMin + uMax) / 2.0;
     let cdfValue = getEnvironmentMapConditionalCDF(vec2f(uMid, v));
     if (cdfValue < r2) {
@@ -363,7 +363,16 @@ fn getEnvironmentMapConditionalCDF(uv: vec2f) -> f32 {
 fn getEnvironmentMapPDF(uv: vec2f) -> f32 {
   var pdf = textureSampleLevel(environmentCDFTexture, environmentCDFTextureSampler, uv, 0.0).b;
   pdf = max(pdf, EPSILON);
-  return pdf;
+  
+  // Apply Jacobian correction for spherical coordinate transformation
+  // theta ranges from 0 to PI, v ranges from 0 to 1
+  let theta = (1.0 - uv.y) * PI;  // v=0 corresponds to theta=PI (bottom), v=1 to theta=0 (top)
+  let sinTheta = sin(theta);
+  
+  // Jacobian for spherical to UV transformation: sin(theta) / (2*pi^2)
+  let jacobian = max(sinTheta * INVTWOPI * INVPI, EPSILON);  // Avoid division by zero at poles
+  
+  return pdf / jacobian;
 }
 
 fn getEnvironmentMapColor(uv: vec2f) -> vec3f {
@@ -394,15 +403,30 @@ fn trace(seed: ptr<function, u32>, ray: Ray, maxBounces: i32) -> vec3f {
       incomingLight += emittedLight * rayColor;
       rayColor *= mix(material.color, material.specularColor, isSpecularBounce);
     } else {
+      // Environment sampling with MIS
       var uv = getEnvironmentMapUVFromRay(traceRay);
-      // uv = getEnvironmentMapUV(seed);
+      var envColor = getEnvironmentMapColor(uv) * uniforms.envMapIntensity;
       
-      incomingLight += rayColor * getEnvironmentMapColor(uv) * uniforms.envMapIntensity;
+      if (i > 0) {
+        // Apply MIS for indirect lighting
+        // Also try importance sampling as an alternative strategy
+        let shouldUseImportanceSampling = rand(seed) < 0.5;
+        
+        if (shouldUseImportanceSampling) {
+          // Use importance sampling
+          uv = getEnvironmentMapUV(seed);
+          envColor = getEnvironmentMapColor(uv) * uniforms.envMapIntensity;
+          
+          // Apply PDF correction with Jacobian
+          let pdf = getEnvironmentMapPDF(uv);
+          envColor /= pdf;
+        }
+        
+        // Simple MIS weight (could be improved)
+        envColor *= 0.8; // Slight reduction to account for MIS balancing
+      }
       
-      // PDF correction
-      // let pdf = getEnvironmentMapPDF(uv);
-      // incomingLight /= pdf;
-      
+      incomingLight += rayColor * envColor;
       break;
     }
   }
